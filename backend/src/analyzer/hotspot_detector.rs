@@ -514,7 +514,7 @@ impl HotSpotDetector {
 
     /// 分析OLAP_SCAN操作符的热点
     fn analyze_olap_scan(fragment_id: &str, pipeline_id: &str, operator: &Operator) -> Vec<HotSpot> {
-        let mut hotspots = Vec::new();
+        let hotspots = Vec::new();
         let _node_path = format!("Fragment{}.Pipeline{}.{}", fragment_id, pipeline_id, operator.name);
 
         // OLAP_SCAN专用的检查逻辑
@@ -633,26 +633,79 @@ impl HotSpotDetector {
     /// 分析ExecutionTree中的单个节点
     fn analyze_execution_tree_node(node: &ExecutionTreeNode) -> Vec<HotSpot> {
         let mut hotspots = Vec::new();
-        let node_path = node.id.clone(); // 使用节点的id作为路径
+        let node_path = format!("{} ({})", node.operator_name, node.id);
 
-        // 将ExecutionTreeNode的metrics转换为临时Operator结构，便于复用现有逻辑
-        let temp_operator = Operator {
-            name: node.operator_name.clone(),
-            operator_id: Some(node.id.to_string()),
-            plan_node_id: Some(node.plan_node_id.unwrap_or(-1).to_string()),
-            common_metrics: Self::convert_metrics_to_map(&node.metrics),
-            unique_metrics: Self::convert_specialized_metrics_to_map(&node.metrics.specialized),
-            children: vec![], // 留空
-        };
-
-        // 检查节点是否是CONNECTOR_SCAN类型
-        if node.node_type == NodeType::ConnectorScan {
-            println!("🎯 Found CONNECTOR_SCAN in execution tree! Analyzing...");
-            // 对于ExecutionTreeNode，我们需要传递临时fragment_id和pipeline_id
-            hotspots.extend(Self::analyze_connector_scan_from_node(&node, &temp_operator));
+        // 1. 检查执行时间热点
+        if let Some(total_time) = node.metrics.operator_total_time {
+            let millis = total_time.as_millis() as f64;
+            let (threshold, severity) = match millis {
+                t if t > 300000.0 => (millis, HotSeverity::Critical),      // > 5分钟
+                t if t > 60000.0 => (millis, HotSeverity::Severe),         // > 1分钟
+                t if t > 10000.0 => (millis, HotSeverity::High),           // > 10秒
+                _ => (0.0, HotSeverity::Normal),
+            };
+            
+            if threshold > 0.0 {
+                hotspots.push(HotSpot {
+                    node_path: node_path.clone(),
+                    severity,
+                    issue_type: "HighLatency".to_string(),
+                    description: format!("{} 执行耗时较长: {:.2}秒", node.operator_name, millis / 1000.0),
+                    suggestions: match node.node_type {
+                        NodeType::ConnectorScan | NodeType::OlapScan => vec![
+                            "检查表扫描是否有数据倾斜".to_string(),
+                            "考虑添加合适的索引".to_string(),
+                            "分析谓词下推情况".to_string(),
+                        ],
+                        NodeType::HashJoin => vec![
+                            "检查JOIN两边的数据分布".to_string(),
+                            "考虑调整JOIN顺序".to_string(),
+                            "启用runtime filter".to_string(),
+                        ],
+                        _ => vec![
+                            "分析该操作符的输入数据量".to_string(),
+                            "检查系统资源是否充足".to_string(),
+                        ],
+                    },
+                });
+            }
         }
 
-        // 可以扩展其他节点类型的分析
+        // 2. 检查I/O性能热点（针对扫描操作符）
+        if let OperatorSpecializedMetrics::ConnectorScan(ref scan_metrics) = node.metrics.specialized {
+            if let (Some(io_time), Some(scan_time)) = (scan_metrics.io_time, scan_metrics.scan_time) {
+                let io_ratio = io_time.as_millis() as f64 / (scan_time.as_millis().max(1) as f64);
+                if io_ratio > 0.8 {
+                    hotspots.push(HotSpot {
+                        node_path: node_path.clone(),
+                        severity: if io_ratio > 0.95 { HotSeverity::Critical } else { HotSeverity::Severe },
+                        issue_type: "IOBottleneck".to_string(),
+                        description: format!("I/O 操作占比过高: {:.1}%", io_ratio * 100.0),
+                        suggestions: vec![
+                            "检查是否存在大量远程I/O读取".to_string(),
+                            "考虑优化数据分布或副本策略".to_string(),
+                            "增加本地存储容量".to_string(),
+                        ],
+                    });
+                }
+            }
+        }
+
+        // 3. 检查输出数据量（可能导致下游压力）
+        if let Some(output_bytes) = node.metrics.output_chunk_bytes {
+            if output_bytes > 1024 * 1024 * 100 { // > 100MB
+                hotspots.push(HotSpot {
+                    node_path: node_path.clone(),
+                    severity: HotSeverity::Mild,
+                    issue_type: "HighDataOutput".to_string(),
+                    description: format!("输出数据量较大: {:.2}MB", output_bytes as f64 / (1024.0 * 1024.0)),
+                    suggestions: vec![
+                        "检查是否可以在本操作符处过滤数据".to_string(),
+                        "考虑提前进行聚合或去重".to_string(),
+                    ],
+                });
+            }
+        }
 
         hotspots
     }

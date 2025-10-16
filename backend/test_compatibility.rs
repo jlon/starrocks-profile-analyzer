@@ -191,7 +191,7 @@ fn verify_connector_scan_parsing(profile_text: &str) {
     }
 }
 
-fn verify_analysis_results(result: &starrocks_profile_analyzer::models::AnalysisResult) {
+fn verify_analysis_results(result: &starrocks_profile_analyzer::models::ProfileAnalysisResponse) {
     println!("📊 分析结果验证:");
 
     // 验证基本结构
@@ -199,6 +199,11 @@ fn verify_analysis_results(result: &starrocks_profile_analyzer::models::Analysis
     println!("  ✅ 性能评分: {:.1}", result.performance_score);
     println!("  ✅ 结论: {}", result.conclusion.lines().next().unwrap_or(""));
     println!("  ✅ {} 条优化建议", result.suggestions.len());
+
+    // 验证执行树
+    if let Some(tree) = &result.execution_tree {
+        println!("  ✅ 执行树包含 {} 个节点", tree.nodes.len());
+    }
 
     // 验证热点分析是否合理
     if !result.hotspots.is_empty() {

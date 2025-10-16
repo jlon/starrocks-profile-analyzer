@@ -1,15 +1,5 @@
 use crate::models::*;
 use std::collections::HashMap;
-use nom::{
-    IResult,
-    bytes::complete::{tag, take_until, take_while},
-    character::complete::{alphanumeric1, space0, digit1},
-    combinator::{opt, map},
-    multi::many0,
-    sequence::{tuple, delimited},
-    branch::alt,
-};
-use chrono::{DateTime, Utc};
 
 pub struct StarRocksProfileParser;
 
@@ -41,8 +31,8 @@ impl StarRocksProfileParser {
         let lines: Vec<&str> = input.lines().collect();
         let mut current_section = Section::None;
         let mut current_fragment: Option<Fragment> = None;
-        let mut current_pipeline: Option<Pipeline> = None;
-        let mut current_operator: Option<Operator> = None;
+        let _current_pipeline: Option<Pipeline> = None;
+        let _current_operator: Option<Operator> = None;
 
         for line in lines {
             let trimmed = line.trim();
@@ -143,16 +133,16 @@ impl StarRocksProfileParser {
     }
 
     fn parse_execution_line(line: &str, profile: &mut Profile) {
-        if let Some((key, value)) = line.split_once(": ") {
+        // 优先检查Topology
+        if line.contains("Topology:") {
+            if let Some(topology_start) = line.find('{') {
+                profile.execution.topology = line[topology_start..].to_string();
+            }
+        } else if let Some((key, value)) = line.split_once(": ") {
             profile.execution.metrics.insert(
                 key.trim().to_string(),
                 value.trim().to_string()
             );
-        } else {
-            // 没有冒号的行，可能是拓扑信息
-            if line.contains("Topology:") {
-                profile.execution.topology = line.to_string();
-            }
         }
     }
 

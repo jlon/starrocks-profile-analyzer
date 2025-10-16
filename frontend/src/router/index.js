@@ -6,6 +6,10 @@ const routes = [
     path: '/',
     name: 'ProfileAnalyzer',
     component: ProfileAnalyzer
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
   }
 ]
 

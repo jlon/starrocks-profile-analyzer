@@ -47,7 +47,17 @@
       </div>
 
       <div v-if="expanded && node.children && node.children.length > 0" class="node-children">
-        <!-- Placeholder for future expansion indicator -->
+        <!-- Recursively render child nodes -->
+        <TreeNode
+          v-for="child in node.children"
+          :key="child.id"
+          :node="child"
+          :depth="child.depth"
+          :show-metrics="showMetrics"
+          :highlight-hotspots="highlightHotspots"
+          :expanded="true"
+          @node-click="handleChildClick"
+        />
       </div>
     </div>
   </div>
@@ -73,6 +83,10 @@ export default {
     expanded: {
       type: Boolean,
       default: true
+    },
+    depth: {
+      type: Number,
+      default: 0
     }
   },
 
@@ -81,6 +95,11 @@ export default {
   methods: {
     handleNodeClick() {
       this.$emit('node-click', this.node)
+    },
+
+    handleChildClick(node) {
+      // Forward child node clicks to parent
+      this.$emit('node-click', node)
     },
 
     getNodeIcon(nodeType) {
@@ -160,9 +179,20 @@ export default {
 
     formatDuration(duration) {
       if (!duration) return 'N/A'
-      const secs = duration.as_secs_f64()
-      if (secs < 1) return `${(secs * 1000).toFixed(1)}ms`
-      return `${secs.toFixed(2)}s`
+      // Handle both Duration objects (with as_secs_f64 method) and numeric values
+      let seconds
+      if (typeof duration === 'object' && duration.as_secs_f64) {
+        seconds = duration.as_secs_f64()
+      } else if (typeof duration === 'number') {
+        // If it's already a number, assume it's in milliseconds
+        seconds = duration / 1000
+      } else if (typeof duration === 'string') {
+        return duration
+      } else {
+        return 'N/A'
+      }
+      if (seconds < 1) return `${(seconds * 1000).toFixed(1)}ms`
+      return `${seconds.toFixed(2)}s`
     },
 
     formatBytes(bytes) {

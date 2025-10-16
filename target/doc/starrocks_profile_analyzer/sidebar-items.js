@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["analyze_profile"],"mod":["analyzer","api","models","parser"]};

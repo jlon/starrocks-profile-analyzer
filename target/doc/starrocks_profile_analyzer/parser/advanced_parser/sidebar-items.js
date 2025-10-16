@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"static":["METRIC_LINE_REGEX","OPERATOR_LINE_REGEX"],"struct":["AdvancedStarRocksProfileParser"]};

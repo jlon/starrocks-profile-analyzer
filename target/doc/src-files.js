@@ -1,2 +1,0 @@
-createSrcSidebar('[["starrocks_profile_analyzer",["",[["analyzer",[],["hotspot_detector.rs","mod.rs","suggestion_engine.rs"]],["api",[],["mod.rs"]],["parser",[],["advanced_parser.rs","mod.rs","starrocks.rs"]]],["lib.rs","models.rs"]]]]');
-//{"start":19,"fragment_lengths":[215]}

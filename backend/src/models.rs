@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -225,6 +224,16 @@ pub struct AnalysisResult {
     pub conclusion: String,
     pub suggestions: Vec<String>,
     pub performance_score: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileAnalysisResponse {
+    pub hotspots: Vec<HotSpot>,
+    pub conclusion: String,
+    pub suggestions: Vec<String>,
+    pub performance_score: f64,
+    pub execution_tree: Option<ExecutionTree>,
+    pub summary: Option<ProfileSummary>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

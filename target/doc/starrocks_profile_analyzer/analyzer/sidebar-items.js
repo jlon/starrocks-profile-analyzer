@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["hotspot_detector","suggestion_engine"]};

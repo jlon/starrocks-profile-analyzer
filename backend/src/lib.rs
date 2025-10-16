@@ -5,33 +5,28 @@ pub mod api;
 
 pub use models::*;
 pub use parser::*;
-pub use analyzer::*;
+pub use analyzer::hotspot_detector::HotSpotDetector;
+pub use analyzer::suggestion_engine::SuggestionEngine;
+pub use parser::advanced_parser::AdvancedStarRocksProfileParser;
+pub use parser::starrocks::StarRocksProfileParser;
 
-use analyzer::hotspot_detector::HotSpotDetector;
-use analyzer::suggestion_engine::SuggestionEngine;
-use parser::advanced_parser::AdvancedStarRocksProfileParser;
-
-pub fn analyze_profile(profile_text: &str) -> Result<AnalysisResult, String> {
-    // 1. 使用高级解析器解析Profile文本
+pub fn analyze_profile(profile_text: &str) -> Result<ProfileAnalysisResponse, String> {
     let profile = AdvancedStarRocksProfileParser::parse_advanced(profile_text)
         .map_err(|e| format!("解析Profile失败: {}", e))?;
 
-    // 2. 检测热点
     let hotspots = HotSpotDetector::analyze(&profile);
-
-    // 3. 生成结论
     let conclusion = SuggestionEngine::generate_conclusion(&hotspots, &profile);
-
-    // 4. 生成建议
     let suggestions = SuggestionEngine::generate_suggestions(&hotspots);
-
-    // 5. 计算性能评分
     let performance_score = SuggestionEngine::calculate_performance_score(&hotspots, &profile);
+    let execution_tree = profile.execution_tree.clone();
+    let summary = Some(profile.summary.clone());
 
-    Ok(AnalysisResult {
+    Ok(ProfileAnalysisResponse {
         hotspots,
         conclusion,
         suggestions,
         performance_score,
+        execution_tree,
+        summary,
     })
 }

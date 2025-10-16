@@ -36,7 +36,13 @@ export default createStore({
       commit('CLEAR_ERROR')
 
       try {
-        const response = await fetch('http://localhost:3030/analyze', {
+        // 使用服务器IP地址
+        const apiUrl = 'http://10.119.43.216:3030/analyze'
+        
+        console.log('📤 开始发送请求到:', apiUrl)
+        console.log('📝 Profile文本长度:', profileText.length, '字符')
+        
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -44,16 +50,32 @@ export default createStore({
           body: JSON.stringify({ profile_text: profileText })
         })
 
+        console.log('📨 收到响应:', response.status, response.statusText)
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
         const result = await response.json()
+        console.log('✅ 解析成功，收到数据:', result)
 
         if (result.success) {
           commit('SET_ANALYSIS_RESULT', result.data)
           commit('SET_PROFILE_TEXT', profileText)
+          console.log('✅ 分析完成！')
         } else {
-          commit('SET_ERROR', result.error || '分析失败')
+          const errorMsg = result.error || '分析失败，未知错误'
+          console.error('❌ 分析返回错误:', errorMsg)
+          commit('SET_ERROR', errorMsg)
         }
       } catch (error) {
-        commit('SET_ERROR', error.message || '网络请求失败')
+        console.error('❌ API请求失败:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        })
+        const msg = `请求失败: ${error.message}`
+        commit('SET_ERROR', msg)
       } finally {
         commit('SET_LOADING', false)
       }

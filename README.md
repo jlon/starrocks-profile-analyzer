@@ -65,7 +65,7 @@ git clone https://github.com/jlon/starrocks-profile-analyzer.git
 cd starrocks-profile-analyzer
 ```
 
-2. **启动后端服务**
+2. **构建和启动后端服务**
 ```bash
 cargo run --bin starrocks-profile-analyzer
 ```
@@ -78,6 +78,21 @@ npm install
 npm run serve
 ```
 前端将在 `http://localhost:8080` 启动
+
+### 项目清理和重组
+
+最近已完成以下项目管理工作：
+
+- **新增 .gitignore 文件**：包含 Rust、Node.js、macOS、IDE 等常见忽略规则
+- **清理构建产物**：移除了 target/、node_modules/ 等临时文件
+- **删除多余文件**：移除了根目录下不必要的 package.json、package-lock.json 和测试文件 test_parse.rs
+- **恢复项目到干净状态**：重置本地变更，确保代码库整洁
+
+4. **检查项目状态**
+```bash
+git status
+```
+确认项目已恢复清洁状态
 
 ### 使用方法
 
