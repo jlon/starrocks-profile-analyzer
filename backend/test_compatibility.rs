@@ -24,11 +24,12 @@ fn main() {
     println!("\n🔬 执行Profile分析:");
     let start_time = Instant::now();
 
-    // 使用高级解析器分析
-    println!("\n🔬 使用高级解析器分析Profile:");
-    match starrocks_profile_analyzer::parser::advanced_parser::AdvancedStarRocksProfileParser::parse_advanced(&profile_text) {
+    // 使用新版解析器分析
+    println!("\n🔬 使用 ProfileComposer 分析Profile:");
+    let mut composer = starrocks_profile_analyzer::ProfileComposer::new();
+    match composer.parse(&profile_text) {
         Ok(advanced_profile) => {
-            println!("✅ 高级解析成功");
+            println!("✅ 解析成功");
             // 检查执行树
             if let Some(tree) = &advanced_profile.execution_tree {
                 println!("📊 执行树包含 {} 个节点", tree.nodes.len());
@@ -38,7 +39,7 @@ fn main() {
             }
         }
         Err(e) => {
-            println!("❌ 高级解析失败: {:?}", e);
+            println!("❌ 解析失败: {:?}", e);
         }
     }
 

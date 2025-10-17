@@ -4,15 +4,16 @@ pub mod analyzer;
 pub mod api;
 
 pub use models::*;
-pub use parser::*;
 pub use analyzer::hotspot_detector::HotSpotDetector;
 pub use analyzer::suggestion_engine::SuggestionEngine;
-pub use parser::advanced_parser::AdvancedStarRocksProfileParser;
-pub use parser::starrocks::StarRocksProfileParser;
+// Primary parser API
+pub use parser::ProfileComposer;
 
+/// Analyze profile using the new ProfileComposer
 pub fn analyze_profile(profile_text: &str) -> Result<ProfileAnalysisResponse, String> {
-    let profile = AdvancedStarRocksProfileParser::parse_advanced(profile_text)
-        .map_err(|e| format!("解析Profile失败: {}", e))?;
+    let mut composer = ProfileComposer::new();
+    let profile = composer.parse(profile_text)
+        .map_err(|e| format!("解析Profile失败: {:?}", e))?;
 
     let hotspots = HotSpotDetector::analyze(&profile);
     let conclusion = SuggestionEngine::generate_conclusion(&hotspots, &profile);

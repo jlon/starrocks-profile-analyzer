@@ -45,9 +45,7 @@
                   </div>
                 </template>
 
-                <AnalysisSummary
-                  :result="analysisResult"
-                />
+                <AnalysisSummary :result="analysisResult" />
               </el-card>
             </el-col>
           </el-row>
@@ -62,9 +60,7 @@
                   </div>
                 </template>
 
-                <ExecutionPlanVisualization
-                  :result="analysisResult"
-                />
+                <ExecutionPlanVisualization :result="analysisResult" />
               </el-card>
             </el-col>
           </el-row>
@@ -79,9 +75,7 @@
                   </div>
                 </template>
 
-                <HotSpotsPanel
-                  :hotspots="analysisResult.hotspots"
-                />
+                <HotSpotsPanel :hotspots="analysisResult.hotspots" />
               </el-card>
             </el-col>
           </el-row>
@@ -92,33 +86,33 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from 'vuex'
-import FileUploader from '../components/FileUploader.vue'
-import AnalysisSummary from '../components/AnalysisSummary.vue'
-import ExecutionPlanVisualization from '../components/ExecutionPlanVisualization.vue'
-import HotSpotsPanel from '../components/HotSpotsPanel.vue'
+import { mapState, mapGetters } from "vuex";
+import FileUploader from "../components/FileUploader.vue";
+import AnalysisSummary from "../components/AnalysisSummary.vue";
+import ExecutionPlanVisualization from "../components/ExecutionPlanVisualization.vue";
+import HotSpotsPanel from "../components/HotSpotsPanel.vue";
 
 export default {
-  name: 'ProfileAnalyzer',
+  name: "ProfileAnalyzer",
 
   components: {
     FileUploader,
     AnalysisSummary,
     ExecutionPlanVisualization,
-    HotSpotsPanel
+    HotSpotsPanel,
   },
 
   computed: {
-    ...mapState(['analysisResult', 'loading', 'error']),
-    ...mapGetters(['hasAnalysisResult'])
+    ...mapState(["analysisResult", "loading", "error"]),
+    ...mapGetters(["hasAnalysisResult"]),
   },
 
   methods: {
     async handleFileUpload(file) {
-      await this.$store.dispatch('analyzeProfile', file)
-    }
-  }
-}
+      await this.$store.dispatch("analyzeProfile", file);
+    },
+  },
+};
 </script>
 
 <style scoped>

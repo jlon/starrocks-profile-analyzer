@@ -14,8 +14,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # 杀死已有的进程
 echo "📋 清理已有进程..."
-pkill -f "npm run serve" 2>/dev/null
-pkill -f "starrocks-profile-analyzer" 2>/dev/null
+pkill -9 -f "starrocks-profile-analyzer" 2>/dev/null
+lsof -ti :3030 | xargs kill -9 2>/dev/null  # 确保 3030 端口可用
+lsof -ti :8080 | xargs kill -9 2>/dev/null  # 确保 8080 端口可用
 sleep 2
 
 # 启动后端
@@ -105,5 +106,5 @@ echo "📖 查看日志:"
 echo "   后端: tail -f /tmp/backend.log"
 echo "   前端: tail -f /tmp/frontend.log"
 echo ""
-echo "🛑 停止服务: pkill -f 'cargo run' && pkill -f 'npm run serve'"
+echo "🛑 停止服务: pkill -9 -f 'starrocks'"
 echo ""

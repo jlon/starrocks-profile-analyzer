@@ -11,7 +11,7 @@ pub struct Profile {
     pub execution_tree: Option<ExecutionTree>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ProfileSummary {
     pub query_id: String,
     pub start_time: String, // 保持为字符串格式
@@ -20,7 +20,24 @@ pub struct ProfileSummary {
     pub query_state: String,
     pub starrocks_version: String,
     pub sql_statement: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_db: Option<String>,
     pub variables: HashMap<String, String>,
+    // Additional metrics for frontend display
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_allocated_memory: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_peak_memory: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub push_total_time: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pull_total_time: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_time_ms: Option<u64>, // Total time in milliseconds for calculations
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,6 +84,11 @@ pub struct ExecutionTreeNode {
     pub depth: usize,
     pub is_hotspot: bool,
     pub hotspot_severity: HotSeverity,
+    // 新增：用于前端按 Fragment/Pipeline 归一化百分比
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fragment_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pipeline_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -87,13 +109,19 @@ pub enum NodeType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperatorMetrics {
     // 通用指标 (所有操作符都有的)
-    pub operator_total_time: Option<Duration>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operator_total_time: Option<u64>, // milliseconds
+    // 新增：保留原始字符串，支持微秒级展示
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operator_total_time_raw: Option<String>,
     pub push_chunk_num: Option<u64>,
     pub push_row_num: Option<u64>,
     pub pull_chunk_num: Option<u64>,
     pub pull_row_num: Option<u64>,
-    pub push_total_time: Option<Duration>,
-    pub pull_total_time: Option<Duration>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub push_total_time: Option<u64>, // milliseconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pull_total_time: Option<u64>, // milliseconds
 
     // 内存相关
     pub memory_usage: Option<u64>,
@@ -105,6 +133,24 @@ pub struct OperatorMetrics {
     pub specialized: OperatorSpecializedMetrics,
 }
 
+impl Default for OperatorMetrics {
+    fn default() -> Self {
+        Self {
+            operator_total_time: None,
+            operator_total_time_raw: None,
+            push_chunk_num: None,
+            push_row_num: None,
+            pull_chunk_num: None,
+            pull_row_num: None,
+            push_total_time: None,
+            pull_total_time: None,
+            memory_usage: None,
+            output_chunk_bytes: None,
+            specialized: OperatorSpecializedMetrics::None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperatorSpecializedMetrics {
     None,
@@ -113,6 +159,7 @@ pub enum OperatorSpecializedMetrics {
     ExchangeSink(ExchangeSinkSpecializedMetrics),
     Join(JoinSpecializedMetrics),
     Aggregate(AggregateSpecializedMetrics),
+    ResultSink(ResultSinkSpecializedMetrics),
     // 可以继续扩展其他操作符的专用指标
 }
 
@@ -188,6 +235,16 @@ pub struct AggregateSpecializedMetrics {
     pub agg_function_time: Option<Duration>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResultSinkSpecializedMetrics {
+    pub sink_type: String,
+    pub operator_total_time: Option<Duration>,
+    pub max_operator_total_time: Option<Duration>,
+    pub append_chunk_time: Option<Duration>,
+    pub result_rend_time: Option<Duration>,
+    pub tuple_convert_time: Option<Duration>,
+}
+
 // 兼容旧接口的简化的Operator接口
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Operator {
@@ -199,7 +256,7 @@ pub struct Operator {
     pub children: Vec<Operator>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum HotSeverity {
     Normal,
     Mild,

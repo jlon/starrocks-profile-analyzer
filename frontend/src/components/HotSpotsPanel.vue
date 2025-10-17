@@ -10,12 +10,18 @@
       <!-- Summary stats -->
       <div class="hotspots-summary">
         <el-row :gutter="20">
-          <el-col :span="6" v-for="(count, severity) in hotspotsBySeverity" :key="severity">
+          <el-col
+            :span="6"
+            v-for="(count, severity) in hotspotsBySeverity"
+            :key="severity"
+          >
             <div class="severity-stat">
               <div class="severity-circle" :class="`hotspot-${severity}`">
                 {{ count }}
               </div>
-              <div class="severity-label">{{ getSeverityZhLabel(severity) }}</div>
+              <div class="severity-label">
+                {{ getSeverityZhLabel(severity) }}
+              </div>
             </div>
           </el-col>
         </el-row>
@@ -59,10 +65,16 @@
                 <p>{{ hotspot.description }}</p>
               </div>
 
-              <div v-if="hotspot.suggestions && hotspot.suggestions.length > 0" class="hotspot-suggestions">
+              <div
+                v-if="hotspot.suggestions && hotspot.suggestions.length > 0"
+                class="hotspot-suggestions"
+              >
                 <h5>优化建议</h5>
                 <ol>
-                  <li v-for="suggestion in hotspot.suggestions" :key="suggestion">
+                  <li
+                    v-for="suggestion in hotspot.suggestions"
+                    :key="suggestion"
+                  >
                     {{ suggestion }}
                   </li>
                 </ol>
@@ -77,22 +89,22 @@
 
 <script>
 export default {
-  name: 'HotSpotsPanel',
+  name: "HotSpotsPanel",
 
   props: {
     hotspots: {
       type: Array,
-      default: () => []
-    }
+      default: () => [],
+    },
   },
 
   computed: {
     hotspotsBySeverity() {
       return this.hotspots.reduce((acc, hotspot) => {
-        const severity = hotspot.severity.toLowerCase()
-        acc[severity] = (acc[severity] || 0) + 1
-        return acc
-      }, {})
+        const severity = hotspot.severity.toLowerCase();
+        acc[severity] = (acc[severity] || 0) + 1;
+        return acc;
+      }, {});
     },
 
     sortedHotspots() {
@@ -103,67 +115,78 @@ export default {
         severe: 2,
         moderate: 3,
         mild: 4,
-        normal: 5
-      }
+        normal: 5,
+      };
 
       return [...this.hotspots].sort((a, b) => {
-        const aOrder = severityOrder[a.severity.toLowerCase()] || 999
-        const bOrder = severityOrder[b.severity.toLowerCase()] || 999
-        return aOrder - bOrder
-      })
-    }
+        const aOrder = severityOrder[a.severity.toLowerCase()] || 999;
+        const bOrder = severityOrder[b.severity.toLowerCase()] || 999;
+        return aOrder - bOrder;
+      });
+    },
   },
 
   methods: {
     getSeverityZhLabel(severity) {
       const labels = {
-        critical: '严重',
-        high: '高',
-        severe: '重度',
-        moderate: '中度',
-        mild: '轻度',
-        normal: '正常'
-      }
-      return labels[severity.toLowerCase()] || severity
+        critical: "严重",
+        high: "高",
+        severe: "重度",
+        moderate: "中度",
+        mild: "轻度",
+        normal: "正常",
+      };
+      return labels[severity.toLowerCase()] || severity;
     },
 
     getSeverityColor(severity) {
       const colors = {
-        critical: '#f5222d',
-        high: '#722ed1',
-        severe: '#fa541a',
-        moderate: '#fa8c16',
-        mild: '#faad14',
-        normal: '#52c41a'
-      }
-      return colors[severity.toLowerCase()] || '#1890ff'
+        critical: "#f5222d",
+        high: "#722ed1",
+        severe: "#fa541a",
+        moderate: "#fa8c16",
+        mild: "#faad14",
+        normal: "#52c41a",
+      };
+      return colors[severity.toLowerCase()] || "#1890ff";
     },
 
     getHotspotTitle(hotspot) {
-      const typeLabels = {
-        'Segment Fragmentation': 'Segment 碎片化',
-        'Connector Scan Inefficiency': '连接器扫描低效',
-        'Memory Usage High': '内存使用过高',
-        'Slow IO Operations': 'IO 操作缓慢',
-        'CPU Intensive Operations': 'CPU 密集操作',
-        'Network Bottleneck': '网络瓶颈'
-      }
-      return typeLabels[hotspot.issue_type] || hotspot.issue_type
+      // 移除硬编码，使用通用逻辑：将英文转中文（如果有翻译配置），否则直接显示
+      // 未来可从后端获取翻译配置
+      return hotspot.issue_type; // 保持通用，显示原始类型
     },
 
     getHotspotIcon(issueType) {
-      const icons = {
-        'Segment Fragmentation': 'fas fa-puzzle-piece',
-        'Connector Scan Inefficiency': 'fas fa-plug',
-        'Memory Usage High': 'fas fa-memory',
-        'Slow IO Operations': 'fas fa-hdd',
-        'CPU Intensive Operations': 'fas fa-microchip',
-        'Network Bottleneck': 'fas fa-network-wired'
-      }
-      return icons[issueType] || 'fas fa-exclamation-triangle'
-    }
-  }
-}
+      // 移除硬编码，使用通用的图标映射规则
+      // 根据关键词智能匹配图标
+      const type = issueType.toLowerCase();
+      
+      if (type.includes("segment") || type.includes("fragmentation"))
+        return "fas fa-puzzle-piece";
+      if (type.includes("connector") || type.includes("scan"))
+        return "fas fa-plug";
+      if (type.includes("memory"))
+        return "fas fa-memory";
+      if (type.includes("io") || type.includes("disk"))
+        return "fas fa-hdd";
+      if (type.includes("cpu"))
+        return "fas fa-microchip";
+      if (type.includes("network"))
+        return "fas fa-network-wired";
+      if (type.includes("join"))
+        return "fas fa-code-branch";
+      if (type.includes("aggregate") || type.includes("agg"))
+        return "fas fa-layer-group";
+      if (type.includes("sort"))
+        return "fas fa-sort-amount-down";
+      if (type.includes("exchange"))
+        return "fas fa-exchange-alt";
+      
+      return "fas fa-exclamation-triangle"; // 默认图标
+    },
+  },
+};
 </script>
 
 <style scoped>

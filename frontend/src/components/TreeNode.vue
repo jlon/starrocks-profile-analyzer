@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="tree-node"
-    :style="{ marginLeft: `${depth * 40}px` }"
-  >
+  <div class="tree-node" :style="{ marginLeft: `${depth * 40}px` }">
     <div
       class="node-container"
       :class="{ 'node-hotspot': highlightHotspots && node.is_hotspot }"
@@ -34,19 +31,28 @@
       <div v-if="showMetrics" class="node-metrics">
         <div class="metric-row">
           <span class="metric-label">耗时:</span>
-          <span class="metric-value">{{ formatDuration(node.metrics.operator_total_time) }}</span>
+          <span class="metric-value">{{
+            formatDuration(node.metrics.operator_total_time_raw || node.metrics.operator_total_time)
+          }}</span>
         </div>
         <div class="metric-row">
           <span class="metric-label">行数:</span>
-          <span class="metric-value">{{ node.metrics.push_row_num || 'N/A' }}</span>
+          <span class="metric-value">{{
+            node.metrics.push_row_num || "N/A"
+          }}</span>
         </div>
         <div class="metric-row">
           <span class="metric-label">内存:</span>
-          <span class="metric-value">{{ formatBytes(node.metrics.memory_usage) }}</span>
+          <span class="metric-value">{{
+            formatBytes(node.metrics.memory_usage)
+          }}</span>
         </div>
       </div>
 
-      <div v-if="expanded && node.children && node.children.length > 0" class="node-children">
+      <div
+        v-if="expanded && node.children && node.children.length > 0"
+        class="node-children"
+      >
         <!-- Recursively render child nodes -->
         <TreeNode
           v-for="child in node.children"
@@ -65,145 +71,159 @@
 
 <script>
 export default {
-  name: 'TreeNode',
+  name: "TreeNode",
 
   props: {
     node: {
       type: Object,
-      required: true
+      required: true,
     },
     showMetrics: {
       type: Boolean,
-      default: true
+      default: true,
     },
     highlightHotspots: {
       type: Boolean,
-      default: true
+      default: true,
     },
     expanded: {
       type: Boolean,
-      default: true
+      default: true,
     },
     depth: {
       type: Number,
-      default: 0
-    }
+      default: 0,
+    },
   },
 
-  emits: ['node-click'],
+  emits: ["node-click"],
 
   methods: {
     handleNodeClick() {
-      this.$emit('node-click', this.node)
+      this.$emit("node-click", this.node);
     },
 
     handleChildClick(node) {
       // Forward child node clicks to parent
-      this.$emit('node-click', node)
+      this.$emit("node-click", node);
     },
 
     getNodeIcon(nodeType) {
       const icons = {
-        OlapScan: 'fas fa-database',
-        ConnectorScan: 'fas fa-plug',
-        HashJoin: 'fas fa-link',
-        Aggregate: 'fas fa-calculator',
-        Limit: 'fas fa-filter',
-        ExchangeSink: 'fas fa-sign-out-alt',
-        ExchangeSource: 'fas fa-sign-in-alt',
-        ResultSink: 'fas fa-flag-checkered',
-        ChunkAccumulate: 'fas fa-layer-group',
-        Sort: 'fas fa-sort',
-        Unknown: 'fas fa-question-circle'
-      }
-      return icons[nodeType] || 'fas fa-cog'
+        OlapScan: "fas fa-database",
+        ConnectorScan: "fas fa-plug",
+        HashJoin: "fas fa-link",
+        Aggregate: "fas fa-calculator",
+        Limit: "fas fa-filter",
+        ExchangeSink: "fas fa-sign-out-alt",
+        ExchangeSource: "fas fa-sign-in-alt",
+        ResultSink: "fas fa-flag-checkered",
+        ChunkAccumulate: "fas fa-layer-group",
+        Sort: "fas fa-sort",
+        Unknown: "fas fa-question-circle",
+      };
+      return icons[nodeType] || "fas fa-cog";
     },
 
     getNodeColor() {
       if (this.highlightHotspots && this.node.is_hotspot) {
-        const severity = this.node.hotspot_severity.toLowerCase()
+        const severity = this.node.hotspot_severity.toLowerCase();
         const colors = {
-          normal: '#52c41a',
-          mild: '#faad14',
-          moderate: '#fa8c16',
-          severe: '#fa541a',
-          critical: '#f5222d',
-          high: '#722ed1'
-        }
-        return colors[severity] || '#1890ff'
+          normal: "#52c41a",
+          mild: "#faad14",
+          moderate: "#fa8c16",
+          severe: "#fa541a",
+          critical: "#f5222d",
+          high: "#722ed1",
+        };
+        return colors[severity] || "#1890ff";
       }
 
       const typeColors = {
-        OlapScan: '#36cfc9',
-        ConnectorScan: '#95de64',
-        HashJoin: '#69c0ff',
-        Aggregate: '#b37feb',
-        Limit: '#f759ab',
-        ExchangeSink: '#ff9c6e',
-        ExchangeSource: '#ff7875',
-        ResultSink: '#d3adf7',
-        Unknown: '#d9d9d9'
-      }
+        OlapScan: "#36cfc9",
+        ConnectorScan: "#95de64",
+        HashJoin: "#69c0ff",
+        Aggregate: "#b37feb",
+        Limit: "#f759ab",
+        ExchangeSink: "#ff9c6e",
+        ExchangeSource: "#ff7875",
+        ResultSink: "#d3adf7",
+        Unknown: "#d9d9d9",
+      };
 
-      return typeColors[this.node.node_type] || '#1890ff'
+      return typeColors[this.node.node_type] || "#1890ff";
     },
 
     getNodeTypeLabel(nodeType) {
       const labels = {
-        OlapScan: 'OLAP 扫描',
-        ConnectorScan: '连接器扫描',
-        HashJoin: '哈希连接',
-        Aggregate: '聚合',
-        Limit: '限制',
-        ExchangeSink: '交换接收',
-        ExchangeSource: '交换源',
-        ResultSink: '结果接收',
-        ChunkAccumulate: '数据块累积',
-        Sort: '排序',
-        Unknown: '未知'
-      }
-      return labels[nodeType] || nodeType
+        OlapScan: "OLAP 扫描",
+        ConnectorScan: "连接器扫描",
+        HashJoin: "哈希连接",
+        Aggregate: "聚合",
+        Limit: "限制",
+        ExchangeSink: "交换接收",
+        ExchangeSource: "交换源",
+        ResultSink: "结果接收",
+        ChunkAccumulate: "数据块累积",
+        Sort: "排序",
+        Unknown: "未知",
+      };
+      return labels[nodeType] || nodeType;
     },
 
     getSeverityAbbrev(severity) {
       const abbrevs = {
-        Normal: '正',
-        Mild: '轻',
-        Moderate: '中',
-        Severe: '重',
-        Critical: '严',
-        High: '高'
-      }
-      return abbrevs[severity] || '热'
+        Normal: "正",
+        Mild: "轻",
+        Moderate: "中",
+        Severe: "重",
+        Critical: "严",
+        High: "高",
+      };
+      return abbrevs[severity] || "热";
     },
 
     formatDuration(duration) {
-      if (!duration) return 'N/A'
-      // Handle both Duration objects (with as_secs_f64 method) and numeric values
-      let seconds
-      if (typeof duration === 'object' && duration.as_secs_f64) {
-        seconds = duration.as_secs_f64()
-      } else if (typeof duration === 'number') {
-        // If it's already a number, assume it's in milliseconds
-        seconds = duration / 1000
-      } else if (typeof duration === 'string') {
-        return duration
+      if (duration === null || duration === undefined) return "N/A";
+      if (typeof duration === "string") return this.toChineseDurationString(duration);
+      let seconds;
+      if (typeof duration === "object" && duration.as_secs_f64) {
+        seconds = duration.as_secs_f64();
+      } else if (typeof duration === "number") {
+        seconds = duration / 1000;
       } else {
-        return 'N/A'
+        return "N/A";
       }
-      if (seconds < 1) return `${(seconds * 1000).toFixed(1)}ms`
-      return `${seconds.toFixed(2)}s`
+      if (seconds < 1) return `${(seconds * 1000).toFixed(3)}毫秒`;
+      if (seconds < 60) return `${seconds.toFixed(2)}秒`;
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = Math.floor(seconds % 60);
+      if (hours > 0) return `${hours}小时${minutes}分钟`;
+      if (minutes > 0) return `${minutes}分钟${secs}秒`;
+      const millis = Math.floor((seconds - Math.floor(seconds)) * 1000);
+      return `${secs}秒${millis}毫秒`;
     },
 
     formatBytes(bytes) {
-      if (!bytes) return 'N/A'
-      const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-      if (bytes === 0) return '0 B'
-      const i = Math.floor(Math.log(bytes) / Math.log(1024))
-      return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
-    }
-  }
-}
+      if (!bytes) return "N/A";
+      const sizes = ["B", "KB", "MB", "GB", "TB"];
+      if (bytes === 0) return "0 B";
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+    },
+    toChineseDurationString(s) {
+      if (!s || typeof s !== "string") return "N/A";
+      return s
+        .replace(/(\d+(?:\.\d+)?)ms/g, (_, n) => `${n}毫秒`)
+        .replace(/(\d+(?:\.\d+)?)us/g, (_, n) => `${n}微秒`)
+        .replace(/(\d+(?:\.\d+)?)ns/g, (_, n) => `${n}纳秒`)
+        .replace(/(\d+(?:\.\d+)?)h/g, (_, n) => `${n}小时`)
+        .replace(/(\d+(?:\.\d+)?)m(?!s)/g, (_, n) => `${n}分钟`)
+        .replace(/(\d+(?:\.\d+)?)s(?![a-z])/g, (_, n) => `${n}秒`);
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -313,6 +333,6 @@ export default {
 .metric-value {
   font-size: 12px;
   color: #303133;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
 }
 </style>

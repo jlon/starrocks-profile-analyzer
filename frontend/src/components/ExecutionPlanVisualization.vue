@@ -2,7 +2,7 @@
   <div class="execution-plan-viz">
     <!-- DAG 图表视图 - 全屏显示 -->
     <div class="dag-container-wrapper">
-      <DAGVisualization 
+      <DAGVisualization
         v-if="result.execution_tree"
         :executionTree="result.execution_tree"
         :summary="result.summary"
@@ -32,11 +32,16 @@
           </el-descriptions-item>
           <el-descriptions-item label="是否热点">
             <el-tag :type="selectedNode.is_hotspot ? 'danger' : 'success'">
-              {{ selectedNode.is_hotspot ? '是' : '否' }}
+              {{ selectedNode.is_hotspot ? "是" : "否" }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="热点严重程度" v-if="selectedNode.is_hotspot">
-            <span :class="`hotspot-${selectedNode.hotspot_severity.toLowerCase()}`">
+          <el-descriptions-item
+            label="热点严重程度"
+            v-if="selectedNode.is_hotspot"
+          >
+            <span
+              :class="`hotspot-${selectedNode.hotspot_severity.toLowerCase()}`"
+            >
               {{ getSeverityLabel(selectedNode.hotspot_severity) }}
             </span>
           </el-descriptions-item>
@@ -51,19 +56,25 @@
                 <div class="metric-grid">
                   <div class="metric-item">
                     <span class="metric-label">总耗时:</span>
-                    <span class="metric-value">{{ formatDuration(selectedNode.metrics.operator_total_time) }}</span>
+                    <span class="metric-value">{{ formatDuration(node.metrics.operator_total_time_raw || node.metrics.operator_total_time) }}</span>
                   </div>
                   <div class="metric-item">
                     <span class="metric-label">推入数据块:</span>
-                    <span class="metric-value">{{ selectedNode.metrics.push_chunk_num || 'N/A' }}</span>
+                    <span class="metric-value">{{
+                      selectedNode.metrics.push_chunk_num || "N/A"
+                    }}</span>
                   </div>
                   <div class="metric-item">
                     <span class="metric-label">推入行数:</span>
-                    <span class="metric-value">{{ selectedNode.metrics.push_row_num || 'N/A' }}</span>
+                    <span class="metric-value">{{
+                      selectedNode.metrics.push_row_num || "N/A"
+                    }}</span>
                   </div>
                   <div class="metric-item">
                     <span class="metric-label">内存使用:</span>
-                    <span class="metric-value">{{ formatBytes(selectedNode.metrics.memory_usage) }}</span>
+                    <span class="metric-value">{{
+                      formatBytes(selectedNode.metrics.memory_usage)
+                    }}</span>
                   </div>
                 </div>
               </el-card>
@@ -73,18 +84,33 @@
               <el-card size="small" shadow="hover">
                 <template #header>专业指标</template>
                 <div class="metric-grid">
-                  <template v-if="selectedNode.metrics.specialized.ConnectorScan">
+                  <template
+                    v-if="selectedNode.metrics.specialized.ConnectorScan"
+                  >
                     <div class="metric-item">
                       <span class="metric-label">读取字节:</span>
-                      <span class="metric-value">{{ formatBytes(selectedNode.metrics.specialized.ConnectorScan.bytes_read) }}</span>
+                      <span class="metric-value">{{
+                        formatBytes(
+                          selectedNode.metrics.specialized.ConnectorScan
+                            .bytes_read,
+                        )
+                      }}</span>
                     </div>
                     <div class="metric-item">
                       <span class="metric-label">读取行数:</span>
-                      <span class="metric-value">{{ selectedNode.metrics.specialized.ConnectorScan.rows_read || 'N/A' }}</span>
+                      <span class="metric-value">{{
+                        selectedNode.metrics.specialized.ConnectorScan
+                          .rows_read || "N/A"
+                      }}</span>
                     </div>
                     <div class="metric-item">
                       <span class="metric-label">IO时间:</span>
-                      <span class="metric-value">{{ formatDuration(selectedNode.metrics.specialized.ConnectorScan.io_time) }}</span>
+                      <span class="metric-value">{{
+                        formatDuration(
+                          selectedNode.metrics.specialized.ConnectorScan
+                            .io_time,
+                        )
+                      }}</span>
                     </div>
                   </template>
                 </div>
@@ -93,7 +119,10 @@
           </el-row>
         </div>
 
-        <div class="children-section" v-if="selectedNode.children && selectedNode.children.length > 0">
+        <div
+          class="children-section"
+          v-if="selectedNode.children && selectedNode.children.length > 0"
+        >
           <h4>子节点</h4>
           <el-tag
             v-for="childId in selectedNode.children"
@@ -110,86 +139,95 @@
 </template>
 
 <script>
-import DAGVisualization from './DAGVisualization.vue'
+import DAGVisualization from "./DAGVisualization.vue";
 
 export default {
-  name: 'ExecutionPlanVisualization',
+  name: "ExecutionPlanVisualization",
 
   components: {
-    DAGVisualization
+    DAGVisualization,
   },
 
   props: {
     result: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
 
   data() {
     return {
       detailVisible: false,
-      selectedNode: null
-    }
+      selectedNode: null,
+    };
   },
 
   methods: {
     closeDetailModal(done) {
-      done()
+      done();
     },
 
-    getNodeTypeLabel(type) {
-      const labels = {
-        'OperatorNode': 'Operator',
-        'ResultSink': '结果汇聚',
-        'ExchangeSource': '交换源',
-        'ExchangeSink': '交换汇',
-        'TableScan': '表扫描',
-        'Filter': '过滤',
-        'Projection': '投影',
-        'Limit': '限制'
-      }
-      return labels[type] || type
-    },
+    // 移除硬编码的 getNodeTypeLabel，使用 setup() 中的
 
     getSeverityLabel(severity) {
       const labels = {
-        'CRITICAL': '严重',
-        'WARNING': '警告',
-        'NORMAL': '正常'
-      }
-      return labels[severity] || severity
+        CRITICAL: "严重",
+        WARNING: "警告",
+        NORMAL: "正常",
+      };
+      return labels[severity] || severity;
     },
 
     formatDuration(duration) {
-      if (!duration) return 'N/A'
-      const ms = this.getDurationMs(duration)
-      if (ms < 1000) return `${ms.toFixed(1)}ms`
-      return `${(ms / 1000).toFixed(2)}s`
+      if (duration === null || duration === undefined) return "N/A";
+      if (typeof duration === "string") {
+        return this.toChineseDurationString(duration);
+      }
+      const ms = this.getDurationMs(duration);
+      if (ms < 1) return `${ms.toFixed(3)}毫秒`;
+      if (ms < 1000) return `${ms.toFixed(3)}毫秒`;
+      const totalSeconds = ms / 1000;
+      if (totalSeconds < 60) return `${totalSeconds.toFixed(2)}秒`;
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      const millis = Math.floor(ms % 1000);
+      if (hours > 0) {
+        return `${hours}小时${minutes}分钟`;
+      }
+      if (minutes > 0) {
+        return `${minutes}分钟${seconds}秒`;
+      }
+      return `${seconds}秒${millis}毫秒`;
     },
 
     getDurationMs(duration) {
-      if (!duration) return 0
-      if (typeof duration === 'number') return duration
-      if (typeof duration === 'object' && duration.as_secs_f64 && typeof duration.as_secs_f64 === 'function') {
-        return duration.as_secs_f64() * 1000
+      if (!duration) return 0;
+      if (typeof duration === "number") return duration;
+      if (typeof duration === "object" && duration !== null) {
+        const secs = duration.secs || 0;
+        const nanos = duration.nanos || 0;
+        return secs * 1000 + Math.floor(nanos / 1_000_000);
       }
-      return 0
+      if (typeof duration === "string") {
+        return this.parseRawDurationMs(duration);
+      }
+      return 0;
     },
 
     formatBytes(bytes) {
-      if (!bytes) return 'N/A'
-      const units = ['B', 'KB', 'MB', 'GB', 'TB']
-      const index = Math.floor(Math.log(bytes) / Math.log(1024))
-      return `${(bytes / Math.pow(1024, index)).toFixed(2)} ${units[index]}`
+      if (!bytes) return "N/A";
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      const index = Math.floor(Math.log(bytes) / Math.log(1024));
+      return `${(bytes / Math.pow(1024, index)).toFixed(2)} ${units[index]}`;
     },
 
     onNodeClick(node) {
-      this.selectedNode = node
-      this.detailVisible = true
-    }
-  }
-}
+      this.selectedNode = node;
+      this.detailVisible = true;
+    },
+  },
+};
 </script>
 
 <style scoped>

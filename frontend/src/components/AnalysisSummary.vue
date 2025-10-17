@@ -45,7 +45,10 @@
       </el-row>
     </div>
 
-    <div class="suggestions-section" v-if="result.suggestions && result.suggestions.length > 0">
+    <div
+      class="suggestions-section"
+      v-if="result.suggestions && result.suggestions.length > 0"
+    >
       <h4>优化建议</h4>
       <el-collapse>
         <el-collapse-item
@@ -62,49 +65,49 @@
 
 <script>
 export default {
-  name: 'AnalysisSummary',
+  name: "AnalysisSummary",
 
   props: {
     result: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
 
   computed: {
     performanceScore() {
-      return this.result.performance_score || 0
+      return this.result.performance_score || 0;
     },
 
     hotspotsCount() {
-      return this.result.hotspots ? this.result.hotspots.length : 0
+      return this.result.hotspots ? this.result.hotspots.length : 0;
     },
 
     hotspotsBySeverity() {
-      if (!this.result.hotspots) return {}
+      if (!this.result.hotspots) return {};
 
       return this.result.hotspots.reduce((acc, hotspot) => {
-        const severity = hotspot.severity.toLowerCase()
-        acc[severity] = (acc[severity] || 0) + 1
-        return acc
-      }, {})
-    }
+        const severity = hotspot.severity.toLowerCase();
+        acc[severity] = (acc[severity] || 0) + 1;
+        return acc;
+      }, {});
+    },
   },
 
   methods: {
     getSeverityLabel(severity) {
       const labels = {
-        normal: '正常',
-        mild: '轻微',
-        moderate: '中等',
-        severe: '严重',
-        critical: '严重',
-        high: '高'
-      }
-      return labels[severity] || severity
-    }
-  }
-}
+        normal: "正常",
+        mild: "轻微",
+        moderate: "中等",
+        severe: "严重",
+        critical: "严重",
+        high: "高",
+      };
+      return labels[severity] || severity;
+    },
+  },
+};
 </script>
 
 <style scoped>

@@ -1,21 +1,21 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import ProfileAnalyzer from '../views/ProfileAnalyzer.vue'
+import { createRouter, createWebHistory } from "vue-router";
+import ProfileAnalyzer from "../views/ProfileAnalyzer.vue";
 
 const routes = [
   {
-    path: '/',
-    name: 'ProfileAnalyzer',
-    component: ProfileAnalyzer
+    path: "/",
+    name: "ProfileAnalyzer",
+    component: ProfileAnalyzer,
   },
   {
-    path: '/:pathMatch(.*)*',
-    redirect: '/'
-  }
-]
+    path: "/:pathMatch(.*)*",
+    redirect: "/",
+  },
+];
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
-})
+  routes,
+});
 
-export default router
+export default router;

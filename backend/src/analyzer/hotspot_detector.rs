@@ -1,5 +1,5 @@
 use crate::models::*;
-use std::collections::HashMap;
+ 
 
 pub struct HotSpotDetector;
 
@@ -637,7 +637,7 @@ impl HotSpotDetector {
 
         // 1. 检查执行时间热点
         if let Some(total_time) = node.metrics.operator_total_time {
-            let millis = total_time.as_millis() as f64;
+            let millis = total_time as f64;
             let (threshold, severity) = match millis {
                 t if t > 300000.0 => (millis, HotSeverity::Critical),      // > 5分钟
                 t if t > 60000.0 => (millis, HotSeverity::Severe),         // > 1分钟
@@ -710,166 +710,5 @@ impl HotSpotDetector {
         hotspots
     }
 
-    /// 从ExecutionTreeNode分析CONNECTOR_SCAN
-    fn analyze_connector_scan_from_node(node: &ExecutionTreeNode, operator: &Operator) -> Vec<HotSpot> {
-        let mut hotspots = Vec::new();
-        let node_path = node.id.clone();
-
-        // 调试：检查指标
-        println!("🔍 Node {} has unique metrics count: {}", node.operator_name, operator.unique_metrics.len());
-        for (key, value) in &operator.unique_metrics {
-            println!("  📊 {}: {}", key, value);
-        }
-
-        // 1. CreateSegmentIter时间过长 (核心瓶颈：Segment迭代器初始化耗时)
-        if let Some(create_iter_time_str) = operator.unique_metrics.get("CreateSegmentIter") {
-            println!("✅ Found CreateSegmentIter [ExecutionTree]: {}", create_iter_time_str);
-            if let Ok(create_seconds) = Self::parse_duration(create_iter_time_str) {
-                println!("✅ Parsed CreateSegmentIter duration [ExecutionTree]: {}s", create_seconds);
-                if create_seconds > 1800.0 { // 超过30分钟
-                    println!("🚨 Creating CRITICAL hotspot for CreateSegmentIter [ExecutionTree]");
-                    hotspots.push(HotSpot {
-                        node_path: node_path.clone(),
-                        severity: HotSeverity::Critical,
-                        issue_type: "fragmented_rowsets".to_string(),
-                        description: format!("Segment迭代器初始化耗时过长: {}s - 表碎片过多导致 (ExecutionTree)", create_seconds),
-                        suggestions: vec![
-                            "触发手动compaction (ALTER TABLE ... COMPACT)".to_string(),
-                            "检查compaction配置 (cumulative_compaction_num_deltas)".to_string(),
-                            "重做表结构减少小文件数量".to_string(),
-                            "定期监控table元数据大小".to_string(),
-                        ],
-                    });
-                } else if create_seconds > 300.0 { // 超过5分钟
-                    println!("🚨 Creating SEVERE hotspot for CreateSegmentIter [ExecutionTree]");
-                    hotspots.push(HotSpot {
-                        node_path: node_path.clone(),
-                        severity: HotSeverity::Severe,
-                        issue_type: "fragmented_rowsets".to_string(),
-                        description: format!("Segment迭代器初始化耗时较长: {}s - 检查表compaction状态 (ExecutionTree)", create_seconds),
-                        suggestions: vec![
-                            "检查表compaction状态和参数".to_string(),
-                            "考虑调整compaction频率".to_string(),
-                            "监控Segment数量变化趋势".to_string(),
-                        ],
-                    });
-                }
-            }
-        }
-
-        // 2. SegmentsReadCount过多 (碎片化检测)
-        if let Some(segment_count_str) = operator.unique_metrics.get("SegmentsReadCount") {
-            if let Ok(segment_count) = segment_count_str.parse::<u64>() {
-                if segment_count > 10000 { // 超过1万个Segment (放宽阈值用于测试)
-                    println!("🚨 Creating SEGMENT COUNT hotspot [ExecutionTree]: {}", segment_count);
-                    hotspots.push(HotSpot {
-                        node_path: node_path.clone(),
-                        severity: HotSeverity::Critical,
-                        issue_type: "fragmented_rowsets".to_string(),
-                        description: format!("太多元信息段需要读取: {} 个 - 严重表碎片化 (ExecutionTree)", segment_count),
-                        suggestions: vec![
-                            "紧急执行表compaction操作".to_string(),
-                            "检查导入策略减少小文件生成".to_string(),
-                            "调整compaction触发阈值".to_string(),
-                        ],
-                    });
-                }
-            }
-        }
-
-        hotspots
-    }
-
-    /// 转换OperatorMetrics为HashMap (简化的实现)
-    fn convert_metrics_to_map(metrics: &OperatorMetrics) -> HashMap<String, String> {
-        let mut map = HashMap::new();
-
-        if let Some(time) = metrics.operator_total_time {
-            map.insert("OperatorTotalTime".to_string(), format!("{}ms", time.as_millis()));
-        }
-        if let Some(num) = metrics.push_chunk_num {
-            map.insert("PushChunkNum".to_string(), num.to_string());
-        }
-        if let Some(num) = metrics.push_row_num {
-            map.insert("PushRowNum".to_string(), num.to_string());
-        }
-        if let Some(num) = metrics.pull_chunk_num {
-            map.insert("PullChunkNum".to_string(), num.to_string());
-        }
-        if let Some(num) = metrics.pull_row_num {
-            map.insert("PullRowNum".to_string(), num.to_string());
-        }
-        if let Some(time) = metrics.push_total_time {
-            map.insert("PushTotalTime".to_string(), format!("{}ms", time.as_millis()));
-        }
-        if let Some(time) = metrics.pull_total_time {
-            map.insert("PullTotalTime".to_string(), format!("{}ms", time.as_millis()));
-        }
-        if let Some(bytes) = metrics.memory_usage {
-            map.insert("MemoryUsage".to_string(), Self::format_bytes(bytes));
-        }
-        if let Some(bytes) = metrics.output_chunk_bytes {
-            map.insert("OutputChunkBytes".to_string(), Self::format_bytes(bytes));
-        }
-
-        map
-    }
-
-    /// 转换OperatorSpecializedMetrics为HashMap (简化的实现)
-    fn convert_specialized_metrics_to_map(specialized: &OperatorSpecializedMetrics) -> HashMap<String, String> {
-        let mut map = HashMap::new();
-
-        // 这里需要根据实际的OperatorSpecializedMetrics结构来转换
-        // 目前这是一个简化的实现，可能需要根据实际数据结构调整
-
-        match specialized {
-            OperatorSpecializedMetrics::ConnectorScan(scan_metrics) => {
-                // 对于扫描操作符，提取相关指标
-                if let Some(time) = scan_metrics.io_task_exec_time {
-                    map.insert("IOTaskExecTime".to_string(), format!("{}ms", time.as_millis()));
-                }
-                if let Some(counts) = scan_metrics.segment_read_count {
-                    map.insert("SegmentsReadCount".to_string(), counts.to_string());
-                }
-                if let Some(time) = scan_metrics.segment_init {
-                    map.insert("SegmentInit".to_string(), format!("{}ms", time.as_millis()));
-                }
-                if let Some(time) = scan_metrics.segment_read {
-                    map.insert("SegmentRead".to_string(), format!("{}ms", time.as_millis()));
-                }
-                if let Some(time) = scan_metrics.io_time {
-                    map.insert("IOTime".to_string(), format!("{}ms", time.as_millis()));
-                }
-                if let Some(time) = scan_metrics.scan_time {
-                    map.insert("ScanTime".to_string(), format!("{}ms", time.as_millis()));
-                }
-                if let Some(bytes) = scan_metrics.bytes_read {
-                    map.insert("BytesRead".to_string(), Self::format_bytes(bytes));
-                }
-                if let Some(rows) = scan_metrics.rows_read {
-                    map.insert("RowsRead".to_string(), rows.to_string());
-                }
-                if let Some(local) = scan_metrics.io_count_local_disk {
-                    map.insert("IOCountLocalDisk".to_string(), local.to_string());
-                }
-                if let Some(remote) = scan_metrics.io_count_remote {
-                    map.insert("IOCountRemote".to_string(), remote.to_string());
-                }
-                if let Some(remote_time) = scan_metrics.io_time_remote {
-                    map.insert("IOTimeRemote".to_string(), format!("{}ms", remote_time.as_millis()));
-                }
-                if let Some(local_bytes) = scan_metrics.compressed_bytes_read_local_disk {
-                    map.insert("CompressedBytesReadLocal".to_string(), Self::format_bytes(local_bytes));
-                }
-                if let Some(remote_bytes) = scan_metrics.compressed_bytes_read_remote {
-                    map.insert("CompressedBytesReadRemote".to_string(), Self::format_bytes(remote_bytes));
-                }
-            }
-            _ => {
-                // 其他类型的操作符暂时不处理
-            }
-        }
-
-        map
-    }
+    // dead code removed
 }

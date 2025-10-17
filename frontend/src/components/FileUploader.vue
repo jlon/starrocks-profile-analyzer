@@ -6,7 +6,7 @@
         <i class="fas fa-keyboard"></i>
         <span>粘贴 Profile 文本</span>
       </div>
-      
+
       <el-input
         v-model="profileText"
         type="textarea"
@@ -16,7 +16,7 @@
         show-word-limit
         class="profile-textarea"
       />
-      
+
       <div class="text-actions">
         <el-button
           type="primary"
@@ -28,11 +28,8 @@
           <i class="fas fa-play"></i>
           开始分析
         </el-button>
-        
-        <el-button
-          @click="clearText"
-          :disabled="!profileText.trim()"
-        >
+
+        <el-button @click="clearText" :disabled="!profileText.trim()">
           清空文本
         </el-button>
       </div>
@@ -49,7 +46,7 @@
         <i class="fas fa-file-upload"></i>
         <span>上传 Profile 文件</span>
       </div>
-      
+
       <el-upload
         ref="uploadRef"
         class="upload-demo"
@@ -66,7 +63,9 @@
           <i class="fas fa-cloud-upload-alt upload-icon"></i>
           <div class="upload-text">
             <p>点击或拖拽 Profile 文件到这里</p>
-            <p class="upload-hint">支持 .txt, .log, .profile 格式文件，最大 50MB</p>
+            <p class="upload-hint">
+              支持 .txt, .log, .profile 格式文件，最大 50MB
+            </p>
           </div>
         </div>
       </el-upload>
@@ -82,9 +81,7 @@
           分析上传的文件
         </el-button>
 
-        <el-button @click="clearFile">
-          移除文件
-        </el-button>
+        <el-button @click="clearFile"> 移除文件 </el-button>
       </div>
 
       <div class="file-info" v-if="selectedFile">
@@ -101,92 +98,93 @@
 
 <script>
 export default {
-  name: 'FileUploader',
+  name: "FileUploader",
 
   props: {
     loading: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
 
-  emits: ['file-uploaded'],
+  emits: ["file-uploaded"],
 
   data() {
     return {
-      profileText: '',
+      profileText: "",
       fileList: [],
-      selectedFile: null
-    }
+      selectedFile: null,
+    };
   },
 
   methods: {
     handleTextAnalyze() {
       if (!this.profileText.trim()) {
-        this.$message.warning('请输入Profile文本')
-        return
+        this.$message.warning("请输入Profile文本");
+        return;
       }
-      this.$emit('file-uploaded', this.profileText)
+      this.$emit("file-uploaded", this.profileText);
     },
 
     clearText() {
-      this.profileText = ''
+      this.profileText = "";
     },
 
     beforeUpload(file) {
-      const isValidType = ['text/plain', 'application/octet-stream'].includes(file.type) ||
-                         file.name.endsWith('.txt') ||
-                         file.name.endsWith('.log') ||
-                         file.name.endsWith('.profile')
+      const isValidType =
+        ["text/plain", "application/octet-stream"].includes(file.type) ||
+        file.name.endsWith(".txt") ||
+        file.name.endsWith(".log") ||
+        file.name.endsWith(".profile");
 
       if (!isValidType) {
-        this.$message.error('只支持 .txt, .log, .profile 格式的文件!')
-        return false
+        this.$message.error("只支持 .txt, .log, .profile 格式的文件!");
+        return false;
       }
 
-      const isLt50M = file.size / 1024 / 1024 < 50
+      const isLt50M = file.size / 1024 / 1024 < 50;
       if (!isLt50M) {
-        this.$message.error('文件大小不能超过 50MB!')
-        return false
+        this.$message.error("文件大小不能超过 50MB!");
+        return false;
       }
 
-      return false // 不自动上传，由手动触发
+      return false; // 不自动上传，由手动触发
     },
 
     handleChange(file, fileList) {
-      this.fileList = fileList.slice(-1)
-      this.selectedFile = file.raw
+      this.fileList = fileList.slice(-1);
+      this.selectedFile = file.raw;
     },
 
     async handleFileAnalyze() {
       if (!this.selectedFile) {
-        this.$message.warning('请先选择文件')
-        return
+        this.$message.warning("请先选择文件");
+        return;
       }
 
       try {
-        const text = await this.selectedFile.text()
-        this.$emit('file-uploaded', text)
+        const text = await this.selectedFile.text();
+        this.$emit("file-uploaded", text);
       } catch (error) {
-        this.$message.error('文件读取失败: ' + error.message)
+        this.$message.error("文件读取失败: " + error.message);
       }
     },
 
     clearFile() {
-      this.fileList = []
-      this.selectedFile = null
-      this.$refs.uploadRef.clearFiles()
+      this.fileList = [];
+      this.selectedFile = null;
+      this.$refs.uploadRef.clearFiles();
     },
 
     formatFileSize(bytes) {
-      if (bytes === 0) return '0 B'
-      const k = 1024
-      const sizes = ['B', 'KB', 'MB', 'GB']
-      const i = Math.floor(Math.log(bytes) / Math.log(k))
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-    }
-  }
-}
+      if (bytes === 0) return "0 B";
+      const k = 1024;
+      const sizes = ["B", "KB", "MB", "GB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -220,7 +218,7 @@ export default {
 
 .profile-textarea {
   margin-bottom: 12px;
-  font-family: 'Monaco', 'Courier New', monospace;
+  font-family: "Monaco", "Courier New", monospace;
 }
 
 :deep(.profile-textarea textarea) {

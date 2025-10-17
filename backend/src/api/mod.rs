@@ -1,7 +1,11 @@
 use warp::Filter;
 use serde_json::json;
-use serde::Serialize;
-use bytes::Bytes;
+use serde::{Serialize, Deserialize};
+
+#[derive(Deserialize)]
+struct AnalyzeRequest {
+    profile_text: String,
+}
 
 pub async fn start_server() {
     let cors = warp::cors()
@@ -12,7 +16,7 @@ pub async fn start_server() {
     let analyze_profile = warp::path("analyze")
         .and(warp::post())
         .and(warp::body::content_length_limit(1024 * 1024 * 50)) // 50MB limit
-        .and(warp::body::bytes())
+        .and(warp::body::json())
         .and_then(handle_analyze_profile);
 
     let health = warp::path("health")
@@ -34,9 +38,8 @@ struct AnalyzeResponse {
     data: Option<crate::models::ProfileAnalysisResponse>,
 }
 
-async fn handle_analyze_profile(body: Bytes) -> Result<impl warp::Reply, warp::Rejection> {
-    let profile_text = String::from_utf8_lossy(&body).to_string();
-    match crate::analyze_profile(&profile_text) {
+async fn handle_analyze_profile(req: AnalyzeRequest) -> Result<impl warp::Reply, warp::Rejection> {
+    match crate::analyze_profile(&req.profile_text) {
         Ok(result) => {
             let response = AnalyzeResponse {
                 success: true,
