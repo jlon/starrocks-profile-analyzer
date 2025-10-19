@@ -1,0 +1,90 @@
+/* 全局样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 滚动条样式 */
+.el-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+}
+
+/* Element Plus 自定义样式 */
+.el-upload.dragger {
+  .el-upload-dragger {
+    border: 2px dashed #d9d9d9;
+    border-radius: 8px;
+    width: 100%;
+    height: 200px;
+
+    &:hover {
+      border-color: #409eff;
+    }
+  }
+}
+
+/* 热点颜色编码 */
+.hotspot-normal {
+  color: #52c41a;
+}
+
+.hotspot-mild {
+  color: #faad14;
+}
+
+.hotspot-moderate {
+  color: #fa8c16;
+}
+
+.hotspot-severe {
+  color: #fa541a;
+}
+
+.hotspot-critical {
+  color: #f5222d;
+}
+
+.hotspot-high {
+  color: #722ed1;
+}
+
+/* 树形图节点样式 */
+.node-gateway {
+  fill: #e6f7ff;
+  stroke: #1890ff;
+}
+
+.node-hotspot {
+  stroke-width: 3px;
+  stroke: #f5222d;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .el-main {
+    padding: 10px;
+  }
+}

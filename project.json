@@ -1,0 +1,48 @@
+{
+  "name": "starrocks-profile-analyzer",
+  "version": "1.0.0",
+  "description": "StarRocks Profile 智能分析器",
+  "type": "monorepo",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "start": "./start_all.sh",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && cargo build --release",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && cargo test",
+    "test:frontend": "cd frontend && npm run test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && cargo fmt && cargo clippy",
+    "lint:frontend": "cd frontend && npm run lint",
+    "clean": "npm run clean:backend && npm run clean:frontend",
+    "clean:backend": "cd backend && cargo clean",
+    "clean:frontend": "cd frontend && rm -rf node_modules dist"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "rust": ">=1.70.0"
+  },
+  "keywords": [
+    "starrocks",
+    "profile",
+    "analyzer",
+    "performance",
+    "olap",
+    "rust",
+    "vue"
+  ],
+  "author": "StarRocks Profile Analyzer Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/starrocks-profile-analyzer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/starrocks-profile-analyzer/issues"
+  },
+  "homepage": "https://github.com/your-org/starrocks-profile-analyzer#readme"
+}

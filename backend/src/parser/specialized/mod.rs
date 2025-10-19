@@ -1,0 +1,60 @@
+// Specialized metrics parsers using strategy pattern
+
+pub mod strategy;
+pub mod scan_strategy;
+pub mod exchange_strategy;
+pub mod join_strategy;
+pub mod aggregate_strategy;
+pub mod result_sink_strategy;
+
+// Re-exports
+pub use strategy::SpecializedMetricsStrategy;
+
+// Main parser structure that uses strategy pattern
+#[derive(Debug, Clone)]
+pub struct SpecializedMetricsParser {
+    scan: ScanStrategy,
+    exchange_sink: ExchangeSinkStrategy,
+    exchange_source: ExchangeSourceStrategy,
+    join: JoinStrategy,
+    aggregate: AggregateStrategy,
+    result_sink: ResultSinkStrategy,
+}
+
+impl Default for SpecializedMetricsParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SpecializedMetricsParser {
+    pub fn new() -> Self {
+        Self {
+            scan: ScanStrategy,
+            exchange_sink: ExchangeSinkStrategy,
+            exchange_source: ExchangeSourceStrategy,
+            join: JoinStrategy,
+            aggregate: AggregateStrategy,
+            result_sink: ResultSinkStrategy,
+        }
+    }
+    
+    pub fn parse(&self, operator_name: &str, text: &str) -> crate::models::OperatorSpecializedMetrics {
+        use crate::models::OperatorSpecializedMetrics;
+        
+        match operator_name {
+            "OLAP_SCAN" | "CONNECTOR_SCAN" => self.scan.parse(text),
+            "EXCHANGE_SINK" => self.exchange_sink.parse(text),
+            "EXCHANGE_SOURCE" => self.exchange_source.parse(text),
+            "JOIN" | "HASH_JOIN" | "NEST_LOOP_JOIN" => self.join.parse(text),
+            "AGGREGATE" | "AGGREGATION" => self.aggregate.parse(text),
+            "RESULT_SINK" => self.result_sink.parse(text),
+            _ => OperatorSpecializedMetrics::None,
+        }
+    }
+}
+pub use scan_strategy::ScanStrategy;
+pub use exchange_strategy::{ExchangeSinkStrategy, ExchangeSourceStrategy};
+pub use join_strategy::JoinStrategy;
+pub use aggregate_strategy::AggregateStrategy;
+pub use result_sink_strategy::ResultSinkStrategy;
