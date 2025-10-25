@@ -62,6 +62,10 @@ impl SectionParser {
             query_cumulative_operator_time: fields.get("QueryCumulativeOperatorTime").cloned(),
             query_cumulative_operator_time_ms: fields.get("QueryCumulativeOperatorTime")
                 .and_then(|time_str| Self::parse_total_time_ms(time_str)),
+            // 解析 QueryExecutionWallTime 字段（用于百分比计算）
+            query_execution_wall_time: fields.get("QueryExecutionWallTime").cloned(),
+            query_execution_wall_time_ms: fields.get("QueryExecutionWallTime")
+                .and_then(|time_str| Self::parse_total_time_ms(time_str)),
         })
     }
     

@@ -33,14 +33,55 @@ pub struct TopologyGraph {
     pub nodes: Vec<TopologyNode>,
 }
 
+/// NodeClass: 对应StarRocks的ProfilingExecPlan.ProfilingElement.instanceOf
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum NodeClass {
+    ExchangeNode,
+    ScanNode,
+    JoinNode,
+    AggregationNode,
+    SortNode,
+    ProjectNode,
+    ResultSink,
+    OlapTableSink,
+    Unknown,
+}
+
+impl Default for NodeClass {
+    fn default() -> Self {
+        NodeClass::Unknown
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TopologyNode {
     pub id: i32,
     pub name: String,
+    #[serde(skip, default)]  // 不从JSON反序列化，而是从name推断
+    pub node_class: NodeClass,
     #[serde(default)]
     pub properties: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub children: Vec<i32>,
+}
+
+impl TopologyNode {
+    /// 从name推断node_class
+    /// 
+    /// 对应StarRocks的ProfilingExecPlan.ProfilingElement.instanceOf方法
+    pub fn infer_node_class(name: &str) -> NodeClass {
+        match name {
+            "EXCHANGE" | "MERGE_EXCHANGE" => NodeClass::ExchangeNode,
+            name if name.contains("SCAN") => NodeClass::ScanNode,
+            name if name.contains("JOIN") => NodeClass::JoinNode,
+            "AGGREGATE" | "AGGREGATION" => NodeClass::AggregationNode,
+            "SORT" => NodeClass::SortNode,
+            "PROJECT" => NodeClass::ProjectNode,
+            "RESULT_SINK" => NodeClass::ResultSink,
+            "OLAP_TABLE_SINK" => NodeClass::OlapTableSink,
+            _ => NodeClass::Unknown,
+        }
+    }
 }
 
 pub struct TopologyParser;
@@ -149,9 +190,9 @@ impl TopologyParser {
     /// * `Err(ParseError)` - 处理失败
     fn extract_and_add_sink_nodes(
         nodes: &mut Vec<TopologyNode>,
-        profile_text: &str,
+        _profile_text: &str,
         fragments: &[crate::models::Fragment],
-        root_id: i32,
+        _root_id: i32,
     ) -> ParseResult<()> {
         // 使用三层查找策略选择 SINK 节点
         let selected_sink = Self::select_sink_node(fragments);
@@ -165,9 +206,11 @@ impl TopologyParser {
             
             // 检查是否已经存在相同ID的节点
             if !nodes.iter().any(|n| n.id == sink_id) {
+                let node_class = TopologyNode::infer_node_class(&sink_name);
                 let sink_node = TopologyNode {
                     id: sink_id,
                     name: sink_name.clone(),
+                    node_class,
                     properties: HashMap::new(),
                     children: vec![], // SINK 节点的子节点关系将在tree_builder中建立
                 };
@@ -235,7 +278,7 @@ impl TopologyParser {
             }
         });
         
-        if let Some((name, is_final, priority)) = sink_candidates.first() {
+        if let Some((name, _is_final, _priority)) = sink_candidates.first() {
             Some(name.clone())
         } else {
             None
@@ -469,7 +512,10 @@ impl TopologyParser {
             .map(|arr| arr.iter().filter_map(|v| v.as_i64().map(|i| i as i32)).collect())
             .unwrap_or_default();
         
-        Ok(TopologyNode { id, name, properties, children })
+        // 从name推断node_class
+        let node_class = TopologyNode::infer_node_class(&name);
+        
+        Ok(TopologyNode { id, name, node_class, properties, children })
     }
     
     fn find_path_to_node(
@@ -560,12 +606,14 @@ mod tests {
                 TopologyNode {
                     id: 1,
                     name: "ROOT".to_string(),
+                    node_class: NodeClass::Unknown,
                     properties: HashMap::new(),
                     children: vec![0],
                 },
                 TopologyNode {
                     id: 0,
                     name: "LEAF".to_string(),
+                    node_class: NodeClass::Unknown,
                     properties: HashMap::new(),
                     children: vec![],
                 },
@@ -583,12 +631,14 @@ mod tests {
                 TopologyNode {
                     id: 1,
                     name: "A".to_string(),
+                    node_class: NodeClass::Unknown,
                     properties: HashMap::new(),
                     children: vec![2],
                 },
                 TopologyNode {
                     id: 2,
                     name: "B".to_string(),
+                    node_class: NodeClass::Unknown,
                     properties: HashMap::new(),
                     children: vec![1], // 环路！
                 },

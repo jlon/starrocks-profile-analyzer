@@ -147,7 +147,11 @@
                 <!-- 节点背景 -->
                 <rect
                   class="node-rect"
-                  :class="{ 'node-hotspot': node.is_hotspot }"
+                  :class="{
+                    'node-hotspot': node.is_hotspot,
+                    'node-most-consuming': node.is_most_consuming,
+                    'node-second-consuming': node.is_second_most_consuming
+                  }"
                   :width="NODE_WIDTH"
                   :height="NODE_HEIGHT"
                   rx="4"
@@ -1202,6 +1206,30 @@ export default {
   fill: #f5222d;
   pointer-events: none;
   text-anchor: end;
+}
+
+/* 时间消耗高亮样式（对齐StarRocks官方逻辑） */
+.node-most-consuming {
+  fill: #ffebee !important;
+  stroke: #f5222d !important;
+  stroke-width: 3px !important;
+}
+
+.node-second-consuming {
+  fill: #fff5f5 !important;
+  stroke: #fa8c16 !important;
+  stroke-width: 2px !important;
+}
+
+/* 百分比文字颜色 */
+.node-most-consuming + g .node-percentage {
+  fill: #f5222d;
+  font-weight: 900;
+}
+
+.node-second-consuming + g .node-percentage {
+  fill: #fa8c16;
+  font-weight: 700;
 }
 
 /* 右侧详情面板 */

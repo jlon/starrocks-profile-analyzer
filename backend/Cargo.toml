@@ -3,6 +3,13 @@ name = "starrocks-profile-analyzer"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "validate_all_profiles"
+path = "validate_all_profiles.rs"
+
+[[bin]]
+name = "validate_detailed"
+path = "validate_detailed.rs"
 
 [dependencies]
 serde = { workspace = true }

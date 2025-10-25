@@ -43,6 +43,10 @@ pub struct ProfileSummary {
     pub query_cumulative_operator_time: Option<String>, // 原始字符串格式
     #[serde(skip_serializing_if = "Option::is_none")]
     pub query_cumulative_operator_time_ms: Option<f64>, // 毫秒格式（支持小数），用于计算
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_execution_wall_time: Option<String>, // 原始字符串格式
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_execution_wall_time_ms: Option<f64>, // 毫秒格式（支持小数），用于百分比计算
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,6 +101,14 @@ pub struct ExecutionTreeNode {
     // 新增：执行时间百分比
     #[serde(skip_serializing_if = "Option::is_none")]
     pub time_percentage: Option<f64>,
+    
+    /// 时间消耗超过30%的节点（红色高亮）
+    #[serde(default)]
+    pub is_most_consuming: bool,
+    
+    /// 时间消耗在15%-30%之间的节点（粉色/珊瑚色高亮）
+    #[serde(default)]
+    pub is_second_most_consuming: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

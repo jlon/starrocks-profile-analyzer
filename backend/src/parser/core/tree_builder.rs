@@ -189,10 +189,107 @@ impl TreeBuilder {
         Ok(())
     }
     
-    /// 计算执行时间百分比
+    /// 计算执行时间百分比（使用NodeInfo，完全符合StarRocks官方逻辑）
     /// 
-    /// 使用智能策略确定基准时间，优先使用所有操作符时间的总和
+    /// 对应ExplainAnalyzer.parseProfile()的metrics计算逻辑
     pub fn calculate_time_percentages(
+        nodes: &mut [ExecutionTreeNode], 
+        summary: &crate::models::ProfileSummary,
+        fragments: &[crate::models::Fragment]
+    ) -> ParseResult<()> {
+        use crate::parser::core::{NodeInfo, TopologyNode};
+        
+        println!("DEBUG: calculate_time_percentages using NodeInfo");
+        
+        // 1. 从nodes构建TopologyNode列表（提供node_class信息）
+        let topology_nodes: Vec<TopologyNode> = nodes.iter().filter_map(|node| {
+            node.plan_node_id.map(|plan_id| {
+                TopologyNode {
+                    id: plan_id,
+                    name: node.operator_name.clone(),
+                    node_class: TopologyNode::infer_node_class(&node.operator_name),
+                    properties: std::collections::HashMap::new(),
+                    children: Vec::new(),
+                }
+            })
+        }).collect();
+        
+        // 2. 构建所有NodeInfo（使用ProfileNodeParser + Topology）
+        let mut node_infos = NodeInfo::build_from_fragments_and_topology(&topology_nodes, fragments);
+        
+        println!("DEBUG: Built {} NodeInfo(s)", node_infos.len());
+        
+        // 3. 计算cumulative_time（使用QueryCumulativeOperatorTime作为基准）
+        println!("DEBUG: summary.query_execution_wall_time_ms = {:?}", summary.query_execution_wall_time_ms);
+        println!("DEBUG: summary.query_cumulative_operator_time_ms = {:?}", summary.query_cumulative_operator_time_ms);
+        
+        let cumulative_time = summary.query_cumulative_operator_time_ms
+            .map(|t| {
+                let ns = (t * 1_000_000.0) as u64; // ms to ns (先乘再转换，保留小数精度)
+                println!("DEBUG: Using QueryCumulativeOperatorTime: {}ms -> {}ns", t, ns);
+                ns
+            })
+            .or_else(|| {
+                // 回退1：使用QueryExecutionWallTime
+                println!("DEBUG: QueryCumulativeOperatorTime not available, trying QueryExecutionWallTime");
+                summary.query_execution_wall_time_ms.map(|t| (t * 1_000_000.0) as u64)
+            })
+            .unwrap_or_else(|| {
+                println!("DEBUG: Neither QueryExecutionWallTime nor QueryCumulativeOperatorTime available, computing from all nodes");
+                // 回退2：先计算每个node的totalTime（不计算百分比），然后求和
+                let mut sum = 0u64;
+                for node_info in node_infos.values_mut() {
+                    // 先计算每个node的totalTime（传入1作为临时cumulative_time）
+                    node_info.compute_time_usage(1);
+                    if let Some(total) = &node_info.total_time {
+                        sum += total.value;
+                    }
+                }
+                println!("DEBUG: Computed cumulative_time from all nodes: {}ns", sum);
+                sum
+            });
+        
+        println!("DEBUG: cumulative_time = {}ns ({}ms)", cumulative_time, cumulative_time / 1_000_000);
+        
+        // 4. 为每个NodeInfo计算metrics和百分比
+        for node_info in node_infos.values_mut() {
+            node_info.compute_time_usage(cumulative_time);
+            node_info.compute_memory_usage();
+        }
+        
+        // 5. 将NodeInfo的metrics填充到ExecutionTreeNode
+        for node in nodes.iter_mut() {
+            if let Some(plan_id) = node.plan_node_id {
+                if let Some(node_info) = node_infos.get(&plan_id) {
+                    // 填充时间百分比
+                    node.time_percentage = Some(node_info.total_time_percentage);
+                    
+                    // 根据时间百分比分类（对齐StarRocks官方逻辑）
+                    let percentage = node_info.total_time_percentage;
+                    if percentage > 30.0 {
+                        node.is_most_consuming = true;
+                        node.is_second_most_consuming = false;
+                    } else if percentage > 15.0 {
+                        node.is_most_consuming = false;
+                        node.is_second_most_consuming = true;
+                    } else {
+                        node.is_most_consuming = false;
+                        node.is_second_most_consuming = false;
+                    }
+                    
+                    println!("DEBUG: Node {} (plan_id={}): percentage={:.2}%, most_consuming={}, second_consuming={}", 
+                        node.operator_name, plan_id, node_info.total_time_percentage,
+                        node.is_most_consuming, node.is_second_most_consuming);
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// 旧的计算执行时间百分比方法（已废弃，保留用于参考）
+    #[allow(dead_code)]
+    fn calculate_time_percentages_old(
         nodes: &mut [ExecutionTreeNode], 
         summary: &crate::models::ProfileSummary,
         fragments: &[crate::models::Fragment]
@@ -232,7 +329,7 @@ impl TreeBuilder {
                         // 优先使用__MAX_OF_OperatorTotalTime，回退到OperatorTotalTime
                         let time_key = if operator.common_metrics.contains_key("__MAX_OF_OperatorTotalTime") {
                             "__MAX_OF_OperatorTotalTime"
-                        } else {
+        } else {
                             "OperatorTotalTime"
                         };
                         
@@ -266,8 +363,8 @@ impl TreeBuilder {
             let operator_time_ms = Self::calculate_complex_aggregation_time(&node, &operator_name, fragments);
             
             if operator_time_ms > 0.0 {
-                let percentage = (operator_time_ms / base_time_ms) * 100.0;
-                node.time_percentage = Some((percentage * 100.0).round() / 100.0); // 保留两位小数
+                    let percentage = (operator_time_ms / base_time_ms) * 100.0;
+                    node.time_percentage = Some((percentage * 100.0).round() / 100.0); // 保留两位小数
             } else {
                 node.time_percentage = None;
             }
@@ -563,7 +660,7 @@ impl TreeBuilder {
         println!("DEBUG: Using fallback BackendProfileMergeTime: {}ms", fallback_time);
         fallback_time
     }
-    
+
     /// 解析时间字符串为毫秒
     /// 
     /// 支持格式：
@@ -715,7 +812,7 @@ impl TreeBuilder {
             }
         });
         
-        if let Some((name, is_final, priority)) = sink_candidates.first() {
+        if let Some((name, _is_final, _priority)) = sink_candidates.first() {
             Some(name.clone())
         } else {
             None
@@ -871,6 +968,8 @@ mod tests {
                 fragment_id: None,
                 pipeline_id: None,
                 time_percentage: None,
+                is_most_consuming: false,
+                is_second_most_consuming: false,
             },
             ExecutionTreeNode {
                 id: "node_1".to_string(),
@@ -886,6 +985,8 @@ mod tests {
                 fragment_id: None,
                 pipeline_id: None,
                 time_percentage: None,
+                is_most_consuming: false,
+                is_second_most_consuming: false,
             },
         ];
         

@@ -56,6 +56,14 @@ impl ProfileComposer {
             }
         }
         
+        // 1.6. 如果Summary中没有QueryExecutionWallTime，尝试从Execution中获取
+        if summary.query_execution_wall_time_ms.is_none() {
+            if let Some(qewt) = execution_info.metrics.get("QueryExecutionWallTime") {
+                summary.query_execution_wall_time_ms = ValueParser::parse_time_to_ms(qewt).ok();
+                summary.query_execution_wall_time = Some(qewt.clone());
+            }
+        }
+        
         // 2. 解析 Fragments（完全按照 SR 逻辑）
         let fragments = FragmentParser::extract_all_fragments(text);
 
@@ -226,6 +234,8 @@ impl ProfileComposer {
                     fragment_id: frag_id,
                     pipeline_id: pipe_id,
                     time_percentage: None,
+                    is_most_consuming: false,
+                    is_second_most_consuming: false,
                 }
             } else {
                 // 如果在 Fragments 中找不到对应的 Operator，创建一个基本节点
@@ -243,6 +253,8 @@ impl ProfileComposer {
                     fragment_id: None,
                     pipeline_id: None,
                     time_percentage: None,
+                    is_most_consuming: false,
+                    is_second_most_consuming: false,
                 }
             };
 
@@ -290,6 +302,8 @@ impl ProfileComposer {
                             fragment_id: Some(fragment.id.clone()),
                             pipeline_id: Some(pipeline.id.clone()),
                             time_percentage: None,
+                            is_most_consuming: false,
+                            is_second_most_consuming: false,
                         };
                             
                             sink_nodes.push(sink_node);
@@ -612,6 +626,8 @@ impl ProfileComposer {
             fragment_id,
             pipeline_id,
             time_percentage: None,
+            is_most_consuming: false,
+            is_second_most_consuming: false,
         })
     }
 }

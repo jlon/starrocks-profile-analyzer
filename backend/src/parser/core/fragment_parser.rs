@@ -206,47 +206,12 @@ impl FragmentParser {
                     None
                 };
                 
-                // 修复：解析完整的操作符文本以获取所有指标，包括 __MAX_OF_* 指标
-                // 这确保了 OperatorTotalTime 能被 __MAX_OF_OperatorTotalTime 正确覆盖
-                let common_metrics_parsed = MetricsParser::parse_common_metrics(&operator_text);
+                // 直接解析原始文本为HashMap，保留所有__MAX_OF_和__MIN_OF_指标
+                // 这对于多backend的情况至关重要
+                let common_metrics_text = MetricsParser::extract_common_metrics_block(&operator_text);
                 let unique_metrics_text = MetricsParser::extract_unique_metrics_block(&operator_text);
                 
-                // 将解析后的通用指标转换为HashMap（保持现有接口兼容性）
-                let mut common_metrics = HashMap::new();
-                if let Some(time_ns) = common_metrics_parsed.operator_total_time {
-                    // 将纳秒转换为毫秒
-                    let time_ms = time_ns as f64 / 1_000_000.0;
-                    common_metrics.insert("OperatorTotalTime".to_string(), format!("{}ms", time_ms));
-                }
-                if let Some(time_ns) = common_metrics_parsed.push_total_time {
-                    // 将纳秒转换为毫秒
-                    let time_ms = time_ns as f64 / 1_000_000.0;
-                    common_metrics.insert("PushTotalTime".to_string(), format!("{}ms", time_ms));
-                }
-                if let Some(time_ns) = common_metrics_parsed.pull_total_time {
-                    // 将纳秒转换为毫秒
-                    let time_ms = time_ns as f64 / 1_000_000.0;
-                    common_metrics.insert("PullTotalTime".to_string(), format!("{}ms", time_ms));
-                }
-                if let Some(num) = common_metrics_parsed.push_chunk_num {
-                    common_metrics.insert("PushChunkNum".to_string(), num.to_string());
-                }
-                if let Some(num) = common_metrics_parsed.push_row_num {
-                    common_metrics.insert("PushRowNum".to_string(), num.to_string());
-                }
-                if let Some(num) = common_metrics_parsed.pull_chunk_num {
-                    common_metrics.insert("PullChunkNum".to_string(), num.to_string());
-                }
-                if let Some(num) = common_metrics_parsed.pull_row_num {
-                    common_metrics.insert("PullRowNum".to_string(), num.to_string());
-                }
-                if let Some(bytes) = common_metrics_parsed.memory_usage {
-                    common_metrics.insert("MemoryUsage".to_string(), format!("{}B", bytes));
-                }
-                if let Some(bytes) = common_metrics_parsed.output_chunk_bytes {
-                    common_metrics.insert("OutputChunkBytes".to_string(), format!("{}B", bytes));
-                }
-                
+                let common_metrics = Self::parse_metrics_to_hashmap(&common_metrics_text);
                 let unique_metrics = Self::parse_metrics_to_hashmap(&unique_metrics_text);
                 
                 operators.push(Operator {
