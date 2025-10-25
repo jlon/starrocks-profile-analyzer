@@ -2,7 +2,7 @@
 
 use crate::models::{JoinSpecializedMetrics, OperatorSpecializedMetrics};
 use super::strategy::SpecializedMetricsStrategy;
-use crate::parser::core::value_parser::ValueParser;
+use crate::parser::core::ValueParser;
 
 #[derive(Debug, Clone)]
 pub struct JoinStrategy;

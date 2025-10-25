@@ -8,7 +8,7 @@
 
 use crate::models::{ProfileSummary, PlannerInfo, ExecutionInfo};
 use crate::parser::error::{ParseError, ParseResult};
-use super::value_parser::ValueParser;
+use super::ValueParser;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashMap;

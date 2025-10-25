@@ -1,16 +1,23 @@
 //! # NodeInfo - 节点信息聚合器
 //! 
-//! 对应StarRocks的ExplainAnalyzer.NodeInfo类
+//! 对应StarRocks的ExplainAnalyzer.NodeInfo类和ProfileNodeParser类
 //! 
 //! 负责：
-//! 1. 从fragments中按plan_node_id聚合operators
-//! 2. 计算各种metrics（totalTime, cpuTime, networkTime, scanTime等）
-//! 3. 计算时间百分比
+//! 1. 从Fragment的RuntimeProfile中提取operators，按plan_node_id分组
+//! 2. 从fragments中按plan_node_id聚合operators
+//! 3. 计算各种metrics（totalTime, cpuTime, networkTime, scanTime等）
+//! 4. 计算时间百分比
 
 use crate::models::{Fragment, Operator};
-use crate::parser::core::{ProfileNodeParser, ValueParser};
+use crate::parser::core::ValueParser;
 use crate::parser::core::topology_parser::{TopologyNode, NodeClass};
 use std::collections::HashMap;
+use regex::Regex;
+use once_cell::sync::Lazy;
+
+static PLAN_NODE_ID_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"plan_node_id=(-?\d+)").unwrap()
+});
 
 /// OperatorProfile: operator的简化表示
 #[derive(Debug, Clone)]
@@ -385,6 +392,81 @@ impl NodeInfo {
                 }
             })
         }
+    }
+}
+
+/// ProfileNodeParser: 从Fragment中按plan_node_id聚合operators
+/// 
+/// 对应StarRocks的ExplainAnalyzer.ProfileNodeParser类 (line 1582-1751)
+pub struct ProfileNodeParser {
+    fragment: Fragment,
+}
+
+impl ProfileNodeParser {
+    pub fn new(fragment: Fragment) -> Self {
+        Self { fragment }
+    }
+    
+    /// 解析所有operators，按plan_node_id分组
+    /// 
+    /// 返回: HashMap<plan_node_id, (native_operators, subordinate_operators)>
+    /// 
+    /// # Returns
+    /// - native_operators: 直接对应plan node的operators（如EXCHANGE_SINK, AGGREGATE_BLOCKING_SOURCE）
+    /// - subordinate_operators: 辅助operators（如LOCAL_EXCHANGE, CHUNK_ACCUMULATE）
+    pub fn parse(&self) -> HashMap<i32, (Vec<Operator>, Vec<Operator>)> {
+        let mut node_map: HashMap<i32, (Vec<Operator>, Vec<Operator>)> = HashMap::new();
+        
+        // 遍历所有pipelines和operators
+        for pipeline in &self.fragment.pipelines {
+            for operator in &pipeline.operators {
+                // 直接使用operator.plan_node_id字段
+                if let Some(ref plan_id_str) = operator.plan_node_id {
+                    if let Ok(plan_id) = plan_id_str.parse::<i32>() {
+                        let entry = node_map.entry(plan_id).or_insert((Vec::new(), Vec::new()));
+                        
+                        // 区分native和subordinate
+                        if Self::is_subordinate_operator(&operator.name) {
+                            entry.1.push(operator.clone());
+                        } else {
+                            entry.0.push(operator.clone());
+                        }
+                    }
+                }
+            }
+        }
+        
+        node_map
+    }
+    
+    /// 判断是否为subordinate operator
+    /// 
+    /// Subordinate operators是辅助operators，不直接对应plan node
+    /// 
+    /// # Examples
+    /// - LOCAL_EXCHANGE
+    /// - CHUNK_ACCUMULATE
+    /// - CACHE
+    /// - COLLECT_STATS_SOURCE/SINK
+    fn is_subordinate_operator(name: &str) -> bool {
+        name.contains("LOCAL_EXCHANGE") ||
+        name.contains("CHUNK_ACCUMULATE") ||
+        name.contains("CACHE") ||
+        name.contains("COLLECT_STATS")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_is_subordinate_operator() {
+        assert!(ProfileNodeParser::is_subordinate_operator("LOCAL_EXCHANGE_SINK (plan_node_id=1)"));
+        assert!(ProfileNodeParser::is_subordinate_operator("CHUNK_ACCUMULATE (plan_node_id=2)"));
+        assert!(ProfileNodeParser::is_subordinate_operator("CACHE (plan_node_id=3)"));
+        assert!(!ProfileNodeParser::is_subordinate_operator("EXCHANGE_SINK (plan_node_id=1)"));
+        assert!(!ProfileNodeParser::is_subordinate_operator("AGGREGATE_BLOCKING_SOURCE (plan_node_id=2)"));
     }
 }
 

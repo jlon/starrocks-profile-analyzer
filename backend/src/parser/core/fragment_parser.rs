@@ -148,7 +148,7 @@ impl FragmentParser {
     /// 提取 Pipeline 中的所有 Operator
     fn extract_operators(text: &str) -> Vec<Operator> {
         use crate::parser::core::operator_parser::OperatorParser;
-        use crate::parser::core::metrics_parser::MetricsParser;
+        use crate::parser::core::MetricsParser;
         
         let mut operators = Vec::new();
         let lines: Vec<&str> = text.lines().collect();

@@ -2,7 +2,7 @@
 
 use crate::models::{OperatorSpecializedMetrics, ResultSinkSpecializedMetrics};
 use super::strategy::SpecializedMetricsStrategy;
-use crate::parser::core::value_parser::ValueParser;
+use crate::parser::core::ValueParser;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]

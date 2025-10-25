@@ -6,7 +6,7 @@ use crate::models::{
     OperatorSpecializedMetrics, OlapScanSpecializedMetrics, ConnectorScanSpecializedMetrics,
 };
 use super::strategy::SpecializedMetricsStrategy;
-use crate::parser::core::value_parser::ValueParser;
+use crate::parser::core::ValueParser;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]

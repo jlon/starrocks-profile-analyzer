@@ -335,7 +335,7 @@ impl TreeBuilder {
                         };
                         
                         if let Some(time) = operator.common_metrics.get(time_key) {
-                            if let Ok(duration) = crate::parser::core::value_parser::ValueParser::parse_duration(time) {
+                            if let Ok(duration) = crate::parser::core::ValueParser::parse_duration(time) {
                                 let time_ms = duration.as_nanos() as f64 / 1_000_000.0;
                                 total_max_operator_time += time_ms;
                                 println!("DEBUG: 找到{}: {}ms, 累计: {}ms", time_key, time_ms, total_max_operator_time);
@@ -438,7 +438,7 @@ impl TreeBuilder {
                     if operator.name.contains(operator_name) {
                     for (key, value) in &operator.common_metrics {
                         if key == "__MAX_OF_OperatorTotalTime" {
-                                if let Ok(duration) = crate::parser::core::value_parser::ValueParser::parse_duration(value) {
+                                if let Ok(duration) = crate::parser::core::ValueParser::parse_duration(value) {
                                     return duration.as_nanos() as f64 / 1_000_000.0;
                                 }
                             }
@@ -468,12 +468,12 @@ impl TreeBuilder {
                             // 从UniqueMetrics中查找NetworkTime和WaitTime
                     for (key, value) in &operator.unique_metrics {
                                 if key == "__MAX_OF_NetworkTime" {
-                                    if let Ok(duration) = crate::parser::core::value_parser::ValueParser::parse_duration(value) {
+                                    if let Ok(duration) = crate::parser::core::ValueParser::parse_duration(value) {
                                         network_time = duration.as_nanos() as f64 / 1_000_000.0;
                                         println!("DEBUG: Found __MAX_OF_NetworkTime: {}ms", network_time);
                                     }
                                 } else if key == "__MAX_OF_WaitTime" {
-                                    if let Ok(duration) = crate::parser::core::value_parser::ValueParser::parse_duration(value) {
+                                    if let Ok(duration) = crate::parser::core::ValueParser::parse_duration(value) {
                                         wait_time = duration.as_nanos() as f64 / 1_000_000.0;
                                         println!("DEBUG: Found __MAX_OF_WaitTime: {}ms", wait_time);
                                     }
@@ -580,7 +580,7 @@ impl TreeBuilder {
                         
                         // 使用OperatorTotalTime（已经包含了__MAX_OF_OperatorTotalTime的值）
                         if let Some(time) = operator.common_metrics.get("OperatorTotalTime") {
-                            if let Ok(duration) = crate::parser::core::value_parser::ValueParser::parse_duration(time) {
+                            if let Ok(duration) = crate::parser::core::ValueParser::parse_duration(time) {
                                 let time_ms = duration.as_nanos() as f64 / 1_000_000.0;
                                 total += time_ms;
                                 println!("DEBUG: Added OperatorTotalTime: {}ms, total: {}ms", time_ms, total);
@@ -623,7 +623,7 @@ impl TreeBuilder {
                             let max_key = format!("__MAX_OF_{}", metric_name);
                             if let Some(max_value) = metrics.get(&max_key) {
                                 println!("DEBUG: Found __MAX_OF_{}: {}", metric_name, max_value);
-                                if let Ok(duration) = crate::parser::core::value_parser::ValueParser::parse_duration(max_value) {
+                                if let Ok(duration) = crate::parser::core::ValueParser::parse_duration(max_value) {
                                     let time_ms = duration.as_nanos() as f64 / 1_000_000.0;
                                     println!("DEBUG: Parsed __MAX_OF_{}: {}ms", metric_name, time_ms);
                                     return time_ms;
@@ -634,7 +634,7 @@ impl TreeBuilder {
                         // 回退到普通指标
                         if let Some(value) = metrics.get(metric_name) {
                             println!("DEBUG: Found {}: {}", metric_name, value);
-                            if let Ok(duration) = crate::parser::core::value_parser::ValueParser::parse_duration(value) {
+                            if let Ok(duration) = crate::parser::core::ValueParser::parse_duration(value) {
                                 let time_ms = duration.as_nanos() as f64 / 1_000_000.0;
                                 println!("DEBUG: Parsed {}: {}ms", metric_name, time_ms);
                                 return time_ms;
