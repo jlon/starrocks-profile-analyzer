@@ -772,6 +772,12 @@ export default {
     },
 
     getPercentage(node) {
+      // 优先使用后端计算的time_percentage（这是官方StarRocks解析逻辑）
+      if (node && node.time_percentage !== undefined && node.time_percentage !== null) {
+        return node.time_percentage.toFixed(2);
+      }
+      
+      // 回退到前端计算（仅用于兼容旧数据）
       if (!node || !node.metrics) return 0;
       const nodeMs = this.getDurationMs(node.metrics.operator_total_time_raw || node.metrics.operator_total_time);
       if (nodeMs === 0) return 0;
