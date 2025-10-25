@@ -19,10 +19,11 @@ pub async fn start_server() {
         .and(warp::body::json())
         .and_then(handle_analyze_profile);
 
+    use crate::constants::file_limits;
     let analyze_profile_file = warp::path("analyze-file")
         .and(warp::post())
-        .and(warp::body::content_length_limit(1024 * 1024 * 50)) // 50MB limit
-        .and(warp::multipart::form().max_length(1024 * 1024 * 50))
+        .and(warp::body::content_length_limit(file_limits::MAX_UPLOAD_SIZE))
+        .and(warp::multipart::form().max_length(file_limits::MAX_UPLOAD_SIZE))
         .and_then(handle_analyze_profile_file);
 
     let health = warp::path("health")

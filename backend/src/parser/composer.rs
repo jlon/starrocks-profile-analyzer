@@ -87,7 +87,8 @@ impl ProfileComposer {
         };
         
         // 7. 计算Top Most Time-consuming Nodes
-        let top_nodes = Self::compute_top_time_consuming_nodes(&execution_tree.nodes, 3);
+        use crate::constants::top_n;
+        let top_nodes = Self::compute_top_time_consuming_nodes(&execution_tree.nodes, top_n::TOP_NODES_LIMIT);
         summary.top_time_consuming_nodes = Some(top_nodes);
         
         // 8. 检测热点
@@ -671,16 +672,20 @@ impl ProfileComposer {
             .enumerate()
             .map(|(i, node)| {
                 let percentage = node.time_percentage.unwrap_or(0.0);
-                TopNode {
-                    rank: (i + 1) as u32,
-                    operator_name: node.operator_name.clone(),
-                    plan_node_id: node.plan_node_id.unwrap_or(-1),
-                    total_time: node.metrics.operator_total_time_raw
-                        .clone()
-                        .unwrap_or_else(|| "N/A".to_string()),
-                    time_percentage: percentage,
-                    is_most_consuming: percentage > 30.0,
-                    is_second_most_consuming: percentage > 15.0 && percentage <= 30.0,
+                {
+                    use crate::constants::time_thresholds;
+                    TopNode {
+                        rank: (i + 1) as u32,
+                        operator_name: node.operator_name.clone(),
+                        plan_node_id: node.plan_node_id.unwrap_or(-1),
+                        total_time: node.metrics.operator_total_time_raw
+                            .clone()
+                            .unwrap_or_else(|| "N/A".to_string()),
+                        time_percentage: percentage,
+                        is_most_consuming: percentage > time_thresholds::MOST_CONSUMING_THRESHOLD,
+                        is_second_most_consuming: percentage > time_thresholds::SECOND_CONSUMING_THRESHOLD 
+                            && percentage <= time_thresholds::MOST_CONSUMING_THRESHOLD,
+                    }
                 }
             })
             .collect()

@@ -2,6 +2,7 @@ pub mod parser;
 pub mod models;
 pub mod analyzer;
 pub mod api;
+pub mod constants;
 
 pub use models::*;
 pub use analyzer::hotspot_detector::HotSpotDetector;

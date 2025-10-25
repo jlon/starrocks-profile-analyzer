@@ -265,11 +265,12 @@ impl TreeBuilder {
                     node.time_percentage = Some(node_info.total_time_percentage);
                     
                     // 根据时间百分比分类（对齐StarRocks官方逻辑）
+                    use crate::constants::time_thresholds;
                     let percentage = node_info.total_time_percentage;
-                    if percentage > 30.0 {
+                    if percentage > time_thresholds::MOST_CONSUMING_THRESHOLD {
                         node.is_most_consuming = true;
                         node.is_second_most_consuming = false;
-                    } else if percentage > 15.0 {
+                    } else if percentage > time_thresholds::SECOND_CONSUMING_THRESHOLD {
                         node.is_most_consuming = false;
                         node.is_second_most_consuming = true;
                     } else {

@@ -225,6 +225,51 @@ impl NodeInfo {
         );
     }
     
+    /// 判断指标是否为时间消耗型（占总时间>30%）
+    /// 对应ExplainAnalyzer.NodeInfo.isTimeConsumingMetric (line 1507-1522)
+    pub fn is_time_consuming_metric(&self, metric_name: &str) -> bool {
+        use crate::constants::time_thresholds;
+        
+        // 如果没有总时间或总时间为0，返回false
+        if self.total_time.is_none() || self.total_time.as_ref().unwrap().value == 0 {
+            return false;
+        }
+        
+        let total_time_ns = self.total_time.as_ref().unwrap().value as f64;
+        
+        // 尝试从CommonMetrics获取指标
+        if let Some(metric) = self.search_metric(
+            SearchMode::Both,
+            None,
+            true,  // use_max = true，优先使用__MAX_OF_值
+            &["CommonMetrics", metric_name]
+        ) {
+            if metric.unit == CounterUnit::TimeNs {
+                let percentage = metric.value as f64 / total_time_ns;
+                if percentage > time_thresholds::METRIC_CONSUMING_THRESHOLD {
+                    return true;
+                }
+            }
+        }
+        
+        // 尝试从UniqueMetrics获取指标
+        if let Some(metric) = self.search_metric(
+            SearchMode::Both,
+            None,
+            true,
+            &["UniqueMetrics", metric_name]
+        ) {
+            if metric.unit == CounterUnit::TimeNs {
+                let percentage = metric.value as f64 / total_time_ns;
+                if percentage > time_thresholds::METRIC_CONSUMING_THRESHOLD {
+                    return true;
+                }
+            }
+        }
+        
+        false
+    }
+    
     /// sumUpMetric实现（对应ExplainAnalyzer.sumUpMetric, line 1304-1334）
     fn sum_up_metric(
         &self,
