@@ -35,47 +35,23 @@ impl ProfileNodeParser {
     pub fn parse(&self) -> HashMap<i32, (Vec<Operator>, Vec<Operator>)> {
         let mut node_map: HashMap<i32, (Vec<Operator>, Vec<Operator>)> = HashMap::new();
         
-        println!("DEBUG ProfileNodeParser: Parsing fragment {}", self.fragment.id);
-        println!("DEBUG ProfileNodeParser: Fragment has {} pipelines", self.fragment.pipelines.len());
-        
         // 遍历所有pipelines和operators
         for pipeline in &self.fragment.pipelines {
-            println!("DEBUG ProfileNodeParser: Pipeline {} has {} operators", 
-                pipeline.id, pipeline.operators.len());
-            
             for operator in &pipeline.operators {
-                println!("DEBUG ProfileNodeParser: Operator name: '{}', plan_node_id: {:?}", 
-                    operator.name, operator.plan_node_id);
-                
                 // 直接使用operator.plan_node_id字段
                 if let Some(ref plan_id_str) = operator.plan_node_id {
                     if let Ok(plan_id) = plan_id_str.parse::<i32>() {
-                        println!("DEBUG ProfileNodeParser: Using plan_node_id={} from operator '{}'", 
-                            plan_id, operator.name);
-                        
                         let entry = node_map.entry(plan_id).or_insert((Vec::new(), Vec::new()));
                         
                         // 区分native和subordinate
                         if Self::is_subordinate_operator(&operator.name) {
-                            println!("DEBUG ProfileNodeParser: {} is subordinate", operator.name);
                             entry.1.push(operator.clone());
                         } else {
-                            println!("DEBUG ProfileNodeParser: {} is native", operator.name);
                             entry.0.push(operator.clone());
                         }
-                    } else {
-                        println!("DEBUG ProfileNodeParser: Failed to parse plan_node_id '{}' as i32", plan_id_str);
                     }
-                } else {
-                    println!("DEBUG ProfileNodeParser: Operator '{}' has no plan_node_id", operator.name);
                 }
             }
-        }
-        
-        println!("DEBUG ProfileNodeParser: Extracted {} plan_node_ids", node_map.len());
-        for (plan_id, (native, sub)) in &node_map {
-            println!("DEBUG ProfileNodeParser: plan_node_id={}: {} native, {} subordinate", 
-                plan_id, native.len(), sub.len());
         }
         
         node_map

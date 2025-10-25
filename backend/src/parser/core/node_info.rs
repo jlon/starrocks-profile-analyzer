@@ -150,17 +150,12 @@ impl NodeInfo {
     
     /// 计算时间使用（对应ExplainAnalyzer.NodeInfo.computeTimeUsage, line 1529-1552）
     pub fn compute_time_usage(&mut self, cumulative_time: u64) {
-        println!("DEBUG: compute_time_usage for plan_node_id={}, node_class={:?}", 
-            self.plan_node_id, self.node_class);
-        
         // 1. 聚合cpuTime（sumUpMetric with SearchMode.BOTH, useMaxValue=true）
         self.cpu_time = self.sum_up_metric(
             SearchMode::Both,
             true,
             &["CommonMetrics", "OperatorTotalTime"]
         );
-        
-        println!("DEBUG:   cpuTime = {:?}", self.cpu_time.as_ref().map(|c| c.value));
         
         // 2. totalTime = cpuTime
         self.total_time = self.cpu_time.clone();
@@ -175,11 +170,9 @@ impl NodeInfo {
                     true,
                     &["UniqueMetrics", "NetworkTime"]
                 );
-                println!("DEBUG:   networkTime = {:?}", self.network_time.as_ref().map(|c| c.value));
                 
                 if let (Some(total), Some(network)) = (&mut self.total_time, &self.network_time) {
                     total.value += network.value;
-                    println!("DEBUG:   totalTime after adding networkTime = {}", total.value);
                 }
             }
             NodeClass::ScanNode => {
@@ -190,11 +183,9 @@ impl NodeInfo {
                     true,
                     &["UniqueMetrics", "ScanTime"]
                 );
-                println!("DEBUG:   scanTime = {:?}", self.scan_time.as_ref().map(|c| c.value));
                 
                 if let (Some(total), Some(scan)) = (&mut self.total_time, &self.scan_time) {
                     total.value += scan.value;
-                    println!("DEBUG:   totalTime after adding scanTime = {}", total.value);
                 }
             }
             _ => {}
@@ -204,8 +195,6 @@ impl NodeInfo {
         if let Some(total) = &self.total_time {
             if cumulative_time > 0 {
                 self.total_time_percentage = (total.value as f64 * 100.0) / cumulative_time as f64;
-                println!("DEBUG:   totalTime={}, cumulative={}, percentage={:.2}%", 
-                    total.value, cumulative_time, self.total_time_percentage);
             }
         }
     }
