@@ -86,10 +86,14 @@ impl ProfileComposer {
             TreeBuilder::build_from_fragments(nodes, &summary, &fragments)?
         };
         
-        // 7. 检测热点
+        // 7. 计算Top Most Time-consuming Nodes
+        let top_nodes = Self::compute_top_time_consuming_nodes(&execution_tree.nodes, 3);
+        summary.top_time_consuming_nodes = Some(top_nodes);
+        
+        // 8. 检测热点
         // 热点检测已集成到analyzer模块中
         
-        // 8. 查找瓶颈
+        // 9. 查找瓶颈
         // 瓶颈检测已集成到analyzer模块中
         
         Ok(Profile {
@@ -629,6 +633,57 @@ impl ProfileComposer {
             is_most_consuming: false,
             is_second_most_consuming: false,
         })
+    }
+    
+    /// 计算Top N最耗时的节点（对齐StarRocks官方逻辑）
+    ///
+    /// # Arguments
+    /// * `nodes` - 所有执行树节点
+    /// * `limit` - 返回Top N个节点
+    ///
+    /// # Returns
+    /// * `Vec<TopNode>` - 按时间百分比降序排列的Top N节点
+    fn compute_top_time_consuming_nodes(
+        nodes: &[crate::models::ExecutionTreeNode],
+        limit: usize
+    ) -> Vec<crate::models::TopNode> {
+        use crate::models::TopNode;
+        
+        // 1. 过滤出有时间百分比且大于0的节点
+        let mut sorted_nodes: Vec<_> = nodes.iter()
+            .filter(|n| {
+                n.time_percentage.is_some() && 
+                n.time_percentage.unwrap() > 0.0 &&
+                n.plan_node_id.is_some()
+            })
+            .collect();
+        
+        // 2. 按时间百分比降序排序
+        sorted_nodes.sort_by(|a, b| {
+            let a_pct = a.time_percentage.unwrap_or(0.0);
+            let b_pct = b.time_percentage.unwrap_or(0.0);
+            b_pct.partial_cmp(&a_pct).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        
+        // 3. 取Top N并构造TopNode
+        sorted_nodes.iter()
+            .take(limit)
+            .enumerate()
+            .map(|(i, node)| {
+                let percentage = node.time_percentage.unwrap_or(0.0);
+                TopNode {
+                    rank: (i + 1) as u32,
+                    operator_name: node.operator_name.clone(),
+                    plan_node_id: node.plan_node_id.unwrap_or(-1),
+                    total_time: node.metrics.operator_total_time_raw
+                        .clone()
+                        .unwrap_or_else(|| "N/A".to_string()),
+                    time_percentage: percentage,
+                    is_most_consuming: percentage > 30.0,
+                    is_second_most_consuming: percentage > 15.0 && percentage <= 30.0,
+                }
+            })
+            .collect()
     }
 }
 

@@ -47,6 +47,22 @@ pub struct ProfileSummary {
     pub query_execution_wall_time: Option<String>, // 原始字符串格式
     #[serde(skip_serializing_if = "Option::is_none")]
     pub query_execution_wall_time_ms: Option<f64>, // 毫秒格式（支持小数），用于百分比计算
+    
+    /// Top N最耗时的节点（对齐StarRocks官方逻辑）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub top_time_consuming_nodes: Option<Vec<TopNode>>,
+}
+
+/// Top N最耗时节点信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TopNode {
+    pub rank: u32,
+    pub operator_name: String,
+    pub plan_node_id: i32,
+    pub total_time: String,
+    pub time_percentage: f64,
+    pub is_most_consuming: bool,
+    pub is_second_most_consuming: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

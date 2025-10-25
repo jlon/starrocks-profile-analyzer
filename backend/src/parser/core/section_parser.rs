@@ -66,6 +66,7 @@ impl SectionParser {
             query_execution_wall_time: fields.get("QueryExecutionWallTime").cloned(),
             query_execution_wall_time_ms: fields.get("QueryExecutionWallTime")
                 .and_then(|time_str| Self::parse_total_time_ms(time_str)),
+            top_time_consuming_nodes: None, // 将在composer中计算
         })
     }
     

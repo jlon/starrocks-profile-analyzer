@@ -229,6 +229,27 @@
                   </div>
                 </div>
 
+              <!-- Top Most Time-consuming Nodes -->
+              <div v-if="summary.top_time_consuming_nodes && summary.top_time_consuming_nodes.length > 0" class="metric-group" style="margin-top: 20px">
+                <h5>Top Most Time-consuming Nodes</h5>
+                <div class="top-nodes-list">
+                  <div
+                    v-for="node in summary.top_time_consuming_nodes"
+                    :key="node.rank"
+                    class="top-node-item"
+                    :class="{
+                      'top-node-most-consuming': node.is_most_consuming,
+                      'top-node-second-consuming': node.is_second_most_consuming
+                    }"
+                  >
+                    <span class="top-node-rank">{{ node.rank }}.</span>
+                    <span class="top-node-name">{{ node.operator_name }}</span>
+                    <span class="top-node-time">{{ node.total_time }}</span>
+                    <span class="top-node-percentage">{{ node.time_percentage.toFixed(2) }}%</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- 内存 -->
               <div class="metric-group" style="margin-top: 20px">
                 <h5>Memory</h5>
@@ -1356,6 +1377,84 @@ export default {
   font-size: 12px;
   font-weight: 600;
   color: #333;
+}
+
+/* Top Most Time-consuming Nodes 样式 */
+.top-nodes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.top-node-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  border-left: 3px solid #d9d9d9;
+  transition: all 0.2s;
+}
+
+.top-node-item:hover {
+  background: #f0f0f0;
+  transform: translateX(2px);
+}
+
+.top-node-most-consuming {
+  background: #ffebee !important;
+  border-left-color: #f5222d !important;
+}
+
+.top-node-second-consuming {
+  background: #fff5f5 !important;
+  border-left-color: #fa8c16 !important;
+}
+
+.top-node-rank {
+  font-size: 14px;
+  font-weight: 700;
+  color: #666;
+  min-width: 25px;
+}
+
+.top-node-most-consuming .top-node-rank {
+  color: #f5222d;
+}
+
+.top-node-second-consuming .top-node-rank {
+  color: #fa8c16;
+}
+
+.top-node-name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 10px;
+}
+
+.top-node-time {
+  font-size: 11px;
+  color: #666;
+  margin-right: 10px;
+}
+
+.top-node-percentage {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1890ff;
+  min-width: 60px;
+  text-align: right;
+}
+
+.top-node-most-consuming .top-node-percentage {
+  color: #f5222d;
+}
+
+.top-node-second-consuming .top-node-percentage {
+  color: #fa8c16;
 }
 
 .specialized-metrics {
