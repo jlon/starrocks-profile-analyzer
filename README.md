@@ -18,11 +18,11 @@
 
 ### Overview
 
-StarRocks Profile Analyzer is a powerful tool designed to parse, analyze, and visualize StarRocks OLAP query profiles. It provides accurate performance metrics, intelligent bottleneck detection, and actionable optimization suggestions based on official StarRocks parsing logic.
+StarRocks Profile Analyzer is a powerful tool designed to parse, analyze, and visualize StarRocks OLAP query profiles. It perfectly replicates the official StarRocks parsing logic, providing accurate performance metrics, intelligent bottleneck detection, and actionable optimization suggestions.
 
 ### Key Features
 
-- **Accurate Parsing**: Universal percentage calculation based on official StarRocks logic
+- **Accurate Parsing**: Perfect replication of official StarRocks parsing logic with universal percentage calculation
 - **Smart Diagnostics**: Automatic performance bottleneck identification
 - **Interactive Visualization**: DAG-based execution plan visualization
 - **Optimization Suggestions**: Automated recommendations based on official tuning recipes
@@ -167,11 +167,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### 概述
 
-StarRocks Profile 分析器是一款专业的查询性能分析工具，用于解析、分析和可视化 StarRocks OLAP 查询 Profile。基于官方 StarRocks 解析逻辑，提供精准的性能指标、智能瓶颈检测和可执行的优化建议。
+StarRocks Profile 分析器是一款专业的查询性能分析工具，用于解析、分析和可视化 StarRocks OLAP 查询 Profile。完美复刻官方 StarRocks 解析逻辑，提供精准的性能指标、智能瓶颈检测和可执行的优化建议。
 
 ### 核心特性
 
-- **精准解析**：基于 StarRocks 官方解析逻辑的通用百分比计算
+- **精准解析**：完美复刻 StarRocks 官方解析逻辑，通用百分比计算
 - **智能诊断**：自动识别执行计划中的性能瓶颈
 - **可视化展示**：基于 DAG 的交互式执行计划可视化
 - **优化建议**：基于官方调优方案的自动化建议
