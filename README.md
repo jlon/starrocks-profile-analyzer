@@ -20,16 +20,16 @@
 
 StarRocks Profile Analyzer is a powerful tool designed to parse, analyze, and visualize StarRocks OLAP query profiles. It provides accurate performance metrics, intelligent bottleneck detection, and actionable optimization suggestions based on official StarRocks parsing logic.
 
-### ✨ Key Features
+### Key Features
 
-- 🎯 **Accurate Parsing**: Universal percentage calculation based on official StarRocks logic
-- 🔍 **Smart Diagnostics**: Automatic performance bottleneck identification
-- 📊 **Interactive Visualization**: DAG-based execution plan visualization
-- 💡 **Optimization Suggestions**: Automated recommendations based on official tuning recipes
-- 🚀 **High Performance**: Optimized for large files with efficient memory usage
-- 🌐 **Modern UI**: Web interface with file upload and text paste support
+- **Accurate Parsing**: Universal percentage calculation based on official StarRocks logic
+- **Smart Diagnostics**: Automatic performance bottleneck identification
+- **Interactive Visualization**: DAG-based execution plan visualization
+- **Optimization Suggestions**: Automated recommendations based on official tuning recipes
+- **High Performance**: Optimized for large files with efficient memory usage
+- **Modern UI**: Web interface with file upload and text paste support
 
-### 🚀 Quick Start
+### Quick Start
 
 #### Prerequisites
 
@@ -41,8 +41,8 @@ StarRocks Profile Analyzer is a powerful tool designed to parse, analyze, and vi
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd starrocks-profile
+git clone https://github.com/jlon/starrocks-profile-analyzer.git
+cd starrocks-profile-analyzer
 
 # One-command startup
 ./start_all.sh
@@ -69,7 +69,7 @@ npx http-server dist -p 8080
 - Frontend: http://localhost:8080
 - Backend API: http://localhost:3030
 
-### 📖 Usage
+### Usage
 
 #### Upload Profile
 
@@ -104,7 +104,7 @@ curl -X POST http://localhost:3030/analyze-file \
   -F "file=@profile.txt"
 ```
 
-### 🏗️ Architecture
+### Architecture
 
 ```
 backend/src/
@@ -123,7 +123,7 @@ frontend/src/
 └── utils/            # Utility functions
 ```
 
-### 🧪 Testing
+### Testing
 
 ```bash
 # Backend tests
@@ -136,14 +136,14 @@ cargo run --release --bin validate_all_profiles
 cd frontend && npm run test
 ```
 
-### 📊 Performance
+### Performance
 
 - **Parsing Speed**: Fast processing for large files (50MB+)
 - **Memory Usage**: Optimized memory management
 - **Accuracy**: High consistency with official parser (<0.3% error)
 - **Compatibility**: Supports StarRocks 3.x profile format
 
-### 🤝 Contributing
+### Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -151,11 +151,11 @@ cd frontend && npm run test
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-### 📄 License
+### License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### 🙏 Acknowledgments
+### Acknowledgments
 
 - [StarRocks](https://github.com/StarRocks/starrocks) - Excellent OLAP engine
 - [Vue.js](https://vuejs.org/) - Progressive JavaScript framework
@@ -169,16 +169,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 StarRocks Profile 分析器是一款专业的查询性能分析工具，用于解析、分析和可视化 StarRocks OLAP 查询 Profile。基于官方 StarRocks 解析逻辑，提供精准的性能指标、智能瓶颈检测和可执行的优化建议。
 
-### ✨ 核心特性
+### 核心特性
 
-- 🎯 **精准解析**：基于 StarRocks 官方解析逻辑的通用百分比计算
-- 🔍 **智能诊断**：自动识别执行计划中的性能瓶颈
-- 📊 **可视化展示**：基于 DAG 的交互式执行计划可视化
-- 💡 **优化建议**：基于官方调优方案的自动化建议
-- 🚀 **高性能**：支持大文件解析，内存使用优化
-- 🌐 **现代界面**：Web 界面，支持文件上传和文本粘贴
+- **精准解析**：基于 StarRocks 官方解析逻辑的通用百分比计算
+- **智能诊断**：自动识别执行计划中的性能瓶颈
+- **可视化展示**：基于 DAG 的交互式执行计划可视化
+- **优化建议**：基于官方调优方案的自动化建议
+- **高性能**：支持大文件解析，内存使用优化
+- **现代界面**：Web 界面，支持文件上传和文本粘贴
 
-### 🚀 快速开始
+### 快速开始
 
 #### 环境要求
 
@@ -190,8 +190,8 @@ StarRocks Profile 分析器是一款专业的查询性能分析工具，用于�
 
 ```bash
 # 克隆项目
-git clone <repository-url>
-cd starrocks-profile
+git clone https://github.com/jlon/starrocks-profile-analyzer.git
+cd starrocks-profile-analyzer
 
 # 一键启动
 ./start_all.sh
@@ -218,7 +218,7 @@ npx http-server dist -p 8080
 - 前端界面：http://localhost:8080
 - 后端 API：http://localhost:3030
 
-### 📖 使用指南
+### 使用指南
 
 #### 上传 Profile
 
@@ -253,7 +253,7 @@ curl -X POST http://localhost:3030/analyze-file \
   -F "file=@profile.txt"
 ```
 
-### 🏗️ 架构
+### 架构
 
 ```
 backend/src/
@@ -272,7 +272,7 @@ frontend/src/
 └── utils/            # 工具函数
 ```
 
-### 🧪 测试
+### 测试
 
 ```bash
 # 后端测试
@@ -285,14 +285,14 @@ cargo run --release --bin validate_all_profiles
 cd frontend && npm run test
 ```
 
-### 📊 性能指标
+### 性能指标
 
 - **解析速度**：支持大文件（50MB+）快速解析
 - **内存使用**：优化的内存管理
 - **准确性**：与官方解析工具高度一致（误差 < 0.3%）
 - **兼容性**：支持 StarRocks 3.x 版本的 Profile 格式
 
-### 🤝 贡献指南
+### 贡献指南
 
 1. Fork 项目
 2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
@@ -300,11 +300,11 @@ cd frontend && npm run test
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 打开 Pull Request
 
-### 📄 许可证
+### 许可证
 
 本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
-### 🙏 致谢
+### 致谢
 
 - [StarRocks](https://github.com/StarRocks/starrocks) - 优秀的 OLAP 引擎
 - [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
@@ -314,6 +314,8 @@ cd frontend && npm run test
 
 <div align="center">
 
-**Made with ❤️ for StarRocks Community**
+**Made for StarRocks Community**
+
+[GitHub Repository](https://github.com/jlon/starrocks-profile-analyzer)
 
 </div>
