@@ -261,8 +261,132 @@
           @mousedown="startResize"
           @touchstart="startResize"
         ></div>
-        <!-- 空状态提示（未选中节点时显示） -->
-        <div v-if="!selectedNodeId" class="empty-panel">
+        <!-- 概览页面（未选中节点时显示查询摘要） -->
+        <div v-if="!selectedNodeId && summary" class="overview-panel">
+          <div class="overview-header">
+            <h3>执行概览</h3>
+          </div>
+
+          <div class="overview-content">
+            <div
+              v-if="summary && summary.total_time_ms"
+              class="overview-metrics"
+            >
+              <!-- 执行时间 -->
+              <div class="metric-group">
+                <h5>Execution Wall time</h5>
+                <div class="time-bar">
+                  <div class="time-value">
+                    {{ formatDuration(getTotalTime()) }}
+                  </div>
+                </div>
+
+                <div class="time-breakdown">
+                  <div
+                    v-for="(item, idx) in getTimeBreakdown()"
+                    :key="idx"
+                    class="time-item"
+                  >
+                    <span
+                      class="time-label"
+                      :style="{ color: getTimeColors()[idx] }"
+                      >●</span
+                    >
+                    <span class="time-name">{{ item.name }}</span>
+                    <span class="time-duration">{{ item.duration }}</span>
+                    <span class="time-percent">{{ item.percent }}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Top Most Time-consuming Nodes -->
+              <div
+                v-if="
+                  summary.top_time_consuming_nodes &&
+                  summary.top_time_consuming_nodes.length > 0
+                "
+                class="metric-group"
+                style="margin-top: 20px"
+              >
+                <h5>Top Most Time-consuming Nodes</h5>
+                <div class="top-nodes-list">
+                  <div
+                    v-for="node in summary.top_time_consuming_nodes"
+                    :key="node.rank"
+                    class="top-node-item"
+                    :class="{
+                      'top-node-most-consuming': node.is_most_consuming,
+                      'top-node-second-consuming':
+                        node.is_second_most_consuming,
+                    }"
+                  >
+                    <span class="top-node-rank">{{ node.rank }}.</span>
+                    <span class="top-node-name">{{ node.operator_name }}</span>
+                    <span
+                      v-if="node.total_time && node.total_time !== 'N/A'"
+                      class="top-node-time"
+                      >{{ node.total_time }}</span
+                    >
+                    <span class="top-node-percentage"
+                      >{{ node.time_percentage.toFixed(2) }}%</span
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- 内存 -->
+              <div
+                v-if="
+                  summary.query_allocated_memory || summary.query_peak_memory
+                "
+                class="metric-group"
+                style="margin-top: 20px"
+              >
+                <h5>Memory</h5>
+                <div class="memory-metrics">
+                  <div
+                    v-if="summary.query_allocated_memory"
+                    class="memory-item"
+                  >
+                    <span class="memory-label">AllocatedMemoryUsage</span>
+                    <span class="memory-value">{{
+                      formatBytes(summary.query_allocated_memory)
+                    }}</span>
+                  </div>
+                  <div v-if="summary.query_peak_memory" class="memory-item">
+                    <span class="memory-label">PeakMemoryUsage</span>
+                    <span class="memory-value">{{
+                      formatBytes(summary.query_peak_memory)
+                    }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Spill Warning -->
+              <div
+                v-if="
+                  summary.query_spill_bytes &&
+                  summary.query_spill_bytes !== '0.000 B'
+                "
+                class="metric-group"
+                style="margin-top: 20px"
+              >
+                <h5>⚠️ Spill Warning</h5>
+                <div class="spill-warning">
+                  <div class="spill-item">
+                    <span class="spill-label">Spill Bytes</span>
+                    <span class="spill-value">{{
+                      summary.query_spill_bytes
+                    }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 空状态提示（未选中节点且无summary时显示） -->
+        <div v-else-if="!selectedNodeId" class="empty-panel">
           <div class="empty-state">
             <i
               class="fas fa-mouse-pointer"
