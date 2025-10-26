@@ -1,15 +1,12 @@
 #!/usr/bin/env rust-script
-//! 验证所有profiles的解析结果是否与官方图片一致
 
 use std::fs;
 
 fn main() {
     println!("=== 严格验证所有profiles与官方图片的一致性 ===\n");
     
-    // 定义每个profile的期望值（从官方PNG图片中提取）
     let test_cases = vec![
         ("profile1.txt", vec![
-            // TODO: 需要从profile1.png中提取期望值
         ]),
         ("profile2.txt", vec![
             ("RESULT_SINK", 3.56),
@@ -18,13 +15,10 @@ fn main() {
         ]),
         ("profile3.txt", vec![
             ("OLAP_SCAN", 99.97),
-            // RESULT_SINK, AGGREGATION, EXCHANGE 都接近 0%，暂不验证
-            // PROJECT 和 AGGREGATION(id=2) 是 0.01%，太小暂不验证
         ]),
         ("profile4.txt", vec![
             ("RESULT_SINK", 97.43),
             ("MERGE_EXCHANGE", 2.64),
-            // SORT, PROJECT, AGGREGATION, OLAP_SCAN 都是 0%，暂不验证
         ]),
         ("profile5.txt", vec![
             ("OLAP_TABLE_SINK", 35.73),
@@ -58,7 +52,6 @@ fn main() {
                                     if let Some(actual_pct) = node.time_percentage {
                                         let diff = (actual_pct - expected_pct).abs();
                                         
-                                        // 允许1%的误差
                                         if diff < 1.0 {
                                             println!("  ✅ {}: {:.2}% (expected {:.2}%, diff {:.2}%)", 
                                                 node_name, actual_pct, expected_pct, diff);

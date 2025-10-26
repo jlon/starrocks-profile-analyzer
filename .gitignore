@@ -13,6 +13,9 @@ yarn-error.log*
 frontend/dist/
 frontend/build/
 
+# Build output
+/build/
+
 # IDE
 .vscode/
 .idea/

@@ -14,7 +14,7 @@ pub struct Profile {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ProfileSummary {
     pub query_id: String,
-    pub start_time: String, // 保持为字符串格式
+    pub start_time: String,
     pub end_time: String,
     pub total_time: String,
     pub query_state: String,
@@ -27,7 +27,6 @@ pub struct ProfileSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_db: Option<String>,
     pub variables: HashMap<String, String>,
-    // Additional metrics for frontend display
     #[serde(skip_serializing_if = "Option::is_none")]
     pub query_allocated_memory: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -37,23 +36,20 @@ pub struct ProfileSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pull_total_time: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_time_ms: Option<f64>, // Total time in milliseconds for calculations
-    // QueryCumulativeOperatorTime: 用于计算operator时间百分比的分母
+    pub total_time_ms: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub query_cumulative_operator_time: Option<String>, // 原始字符串格式
+    pub query_cumulative_operator_time: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub query_cumulative_operator_time_ms: Option<f64>, // 毫秒格式（支持小数），用于计算
+    pub query_cumulative_operator_time_ms: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub query_execution_wall_time: Option<String>, // 原始字符串格式
+    pub query_execution_wall_time: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub query_execution_wall_time_ms: Option<f64>, // 毫秒格式（支持小数），用于百分比计算
+    pub query_execution_wall_time_ms: Option<f64>,
     
-    /// Top N最耗时的节点（对齐StarRocks官方逻辑）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub top_time_consuming_nodes: Option<Vec<TopNode>>,
 }
 
-/// Top N最耗时节点信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TopNode {
     pub rank: u32,
@@ -105,24 +101,21 @@ pub struct ExecutionTreeNode {
     pub plan_node_id: Option<i32>,
     pub parent_plan_node_id: Option<i32>,
     pub metrics: OperatorMetrics,
-    pub children: Vec<String>, // 孩子的ID列表
+    pub children: Vec<String>,
     pub depth: usize,
     pub is_hotspot: bool,
     pub hotspot_severity: HotSeverity,
-    // 新增：用于前端按 Fragment/Pipeline 归一化百分比
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fragment_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pipeline_id: Option<String>,
-    // 新增：执行时间百分比
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub time_percentage: Option<f64>,
     
-    /// 时间消耗超过30%的节点（红色高亮）
     #[serde(default)]
     pub is_most_consuming: bool,
     
-    /// 时间消耗在15%-30%之间的节点（粉色/珊瑚色高亮）
     #[serde(default)]
     pub is_second_most_consuming: bool,
 }
@@ -144,10 +137,10 @@ pub enum NodeType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperatorMetrics {
-    // 通用指标 (所有操作符都有的)
+
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub operator_total_time: Option<u64>, // nanoseconds (changed from milliseconds for precision)
-    // 保留原始字符串格式，用于调试
+    pub operator_total_time: Option<u64>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operator_total_time_raw: Option<String>,
     pub push_chunk_num: Option<u64>,
@@ -155,17 +148,17 @@ pub struct OperatorMetrics {
     pub pull_chunk_num: Option<u64>,
     pub pull_row_num: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub push_total_time: Option<u64>, // nanoseconds (changed from milliseconds for precision)
+    pub push_total_time: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pull_total_time: Option<u64>, // nanoseconds (changed from milliseconds for precision)
+    pub pull_total_time: Option<u64>,
 
-    // 内存相关
+
     pub memory_usage: Option<u64>,
 
-    // 输出数据量
+
     pub output_chunk_bytes: Option<u64>,
 
-    // 专用指标 (根据操作符类型决定)
+
     pub specialized: OperatorSpecializedMetrics,
 }
 
@@ -196,7 +189,7 @@ pub enum OperatorSpecializedMetrics {
     Join(JoinSpecializedMetrics),
     Aggregate(AggregateSpecializedMetrics),
     ResultSink(ResultSinkSpecializedMetrics),
-    // 可以继续扩展其他操作符的专用指标
+
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -207,7 +200,6 @@ pub struct ConnectorScanSpecializedMetrics {
     pub shared_scan: bool,
     pub morsel_queue_type: String,
 
-    // IO统计
     pub io_time: Option<Duration>,
     pub io_task_exec_time: Option<Duration>,
     pub scan_time: Option<Duration>,
@@ -216,7 +208,6 @@ pub struct ConnectorScanSpecializedMetrics {
     pub rows_read: Option<u64>,
     pub raw_rows_read: Option<u64>,
 
-    // IO统计细节
     pub compressed_bytes_read_local_disk: Option<u64>,
     pub compressed_bytes_read_remote: Option<u64>,
     pub compressed_bytes_read_request: Option<u64>,
@@ -225,7 +216,7 @@ pub struct ConnectorScanSpecializedMetrics {
     pub io_time_local_disk: Option<Duration>,
     pub io_time_remote: Option<Duration>,
 
-    // 分段读取统计
+
     pub segment_init: Option<Duration>,
     pub segment_read: Option<Duration>,
     pub segment_read_count: Option<u64>,
@@ -246,7 +237,7 @@ pub struct OlapScanSpecializedMetrics {
 pub struct ExchangeSinkSpecializedMetrics {
     pub dest_fragment_ids: Vec<String>,
     pub dest_be_addresses: Vec<String>,
-    pub part_type: String, // "UNPARTITIONED"
+    pub part_type: String,
     pub bytes_sent: Option<u64>,
     pub bytes_pass_through: Option<u64>,
     pub request_sent: Option<u64>,
@@ -281,7 +272,6 @@ pub struct ResultSinkSpecializedMetrics {
     pub tuple_convert_time: Option<Duration>,
 }
 
-// 兼容旧接口的简化的Operator接口
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Operator {
     pub name: String,

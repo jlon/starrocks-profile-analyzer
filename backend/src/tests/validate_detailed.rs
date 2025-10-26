@@ -1,65 +1,64 @@
 #!/usr/bin/env rust-script
-//! 详细验证每个节点的所有指标（时间、行数等）
+
 
 use std::fs;
 
 fn main() {
     println!("=== 详细验证所有节点的指标 ===\n");
     
-    // 定义每个profile的详细期望值（从官方PNG图片中提取）
     let test_cases = vec![
         ("profile2.txt", vec![
             NodeExpectation {
                 name: "RESULT_SINK",
                 time_percentage: Some(3.56),
                 output_rows: Some(11),
-                // 从图片中提取其他指标
+
             },
             NodeExpectation {
                 name: "EXCHANGE",
                 time_percentage: Some(45.73),
-                output_rows: None, // 需要从图片确认
+                output_rows: None,
             },
             NodeExpectation {
                 name: "SCHEMA_SCAN",
                 time_percentage: Some(50.75),
-                output_rows: None, // 需要从图片确认
+                output_rows: None,
             },
         ]),
         ("profile3.txt", vec![
             NodeExpectation {
                 name: "OLAP_SCAN",
                 time_percentage: Some(99.97),
-                output_rows: None, // 需要从图片确认
+                output_rows: None,
             },
         ]),
         ("profile4.txt", vec![
             NodeExpectation {
                 name: "RESULT_SINK",
                 time_percentage: Some(97.43),
-                output_rows: None, // 需要从图片确认
+                output_rows: None,
             },
             NodeExpectation {
                 name: "MERGE_EXCHANGE",
                 time_percentage: Some(2.64),
-                output_rows: None, // 需要从图片确认
+                output_rows: None,
             },
         ]),
         ("profile5.txt", vec![
             NodeExpectation {
                 name: "OLAP_TABLE_SINK",
                 time_percentage: Some(35.73),
-                output_rows: None, // 需要从图片确认
+                output_rows: None,
             },
             NodeExpectation {
                 name: "PROJECT",
                 time_percentage: Some(5.64),
-                output_rows: None, // 需要从图片确认
+                output_rows: None,
             },
             NodeExpectation {
                 name: "TABLE_FUNCTION",
                 time_percentage: Some(59.07),
-                output_rows: None, // 需要从图片确认
+                output_rows: None,
             },
         ]),
     ];
@@ -81,7 +80,7 @@ fn main() {
                                 println!("\n  🔍 节点: {}", expectation.name);
                                 
                                 if let Some(node) = tree.nodes.iter().find(|n| n.operator_name == expectation.name) {
-                                    // 验证时间百分比
+
                                     if let Some(expected_pct) = expectation.time_percentage {
                                         total_checks += 1;
                                         if let Some(actual_pct) = node.time_percentage {
@@ -101,10 +100,9 @@ fn main() {
                                         }
                                     }
                                     
-                                    // 验证输出行数
+
                                     if let Some(expected_rows) = expectation.output_rows {
                                         total_checks += 1;
-                                        // 从metrics中获取输出行数
                                         let actual_rows = node.metrics.pull_row_num.or(node.metrics.push_row_num);
                                         if let Some(rows) = actual_rows {
                                             if rows == expected_rows {
@@ -119,7 +117,7 @@ fn main() {
                                         }
                                     }
                                     
-                                    // 显示其他关键指标（用于手动对比）
+
                                     println!("    📊 其他指标:");
                                     if let Some(time_ns) = node.metrics.operator_total_time {
                                         let time_ms = time_ns as f64 / 1_000_000.0;

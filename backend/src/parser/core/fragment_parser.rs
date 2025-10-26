@@ -1,6 +1,4 @@
-//! # FragmentParser - Fragment 解析器
 //! 
-//! 负责解析 Fragment 和 Pipeline 结构。
 
 use crate::models::{Fragment, Pipeline, Operator};
 use crate::parser::error::ParseResult;
@@ -19,11 +17,7 @@ static PIPELINE_REGEX: Lazy<Regex> = Lazy::new(|| {
 pub struct FragmentParser;
 
 impl FragmentParser {
-    /// 解析单个 Fragment
     /// 
-    /// # Arguments
-    /// * `text` - Fragment 的完整文本块
-    /// * `id` - Fragment ID
     pub fn parse_fragment(text: &str, id: &str) -> ParseResult<Fragment> {
         let backend_addresses = Self::extract_backend_addresses(text);
         let instance_ids = Self::extract_instance_ids(text);
@@ -37,7 +31,6 @@ impl FragmentParser {
         })
     }
     
-    /// 从 Profile 文本中提取所有 Fragment（完全符合 SR 生成逻辑）
     pub fn extract_all_fragments(text: &str) -> Vec<Fragment> {
         let mut fragments = Vec::new();
         let lines: Vec<&str> = text.lines().collect();
@@ -51,7 +44,6 @@ impl FragmentParser {
                 let start_idx = i;
                 let base_indent = Self::get_indent(line);
                 
-                // 查找下一个 Fragment 或文件结束
                 let mut end_idx = lines.len();
                 for j in (i + 1)..lines.len() {
                     let next_indent = Self::get_indent(lines[j]);
@@ -63,7 +55,6 @@ impl FragmentParser {
                 
                 let fragment_text = lines[start_idx..end_idx].join("\n");
                 
-                // 解析 Fragment
                 if let Ok(fragment) = Self::parse_fragment(&fragment_text, &id) {
                     fragments.push(fragment);
                 }
@@ -77,7 +68,6 @@ impl FragmentParser {
         fragments
     }
     
-    /// 解析 Fragment 中的所有 Pipeline
     fn parse_pipelines(text: &str) -> ParseResult<Vec<Pipeline>> {
         let mut pipelines = Vec::new();
         let lines: Vec<&str> = text.lines().collect();
@@ -91,7 +81,6 @@ impl FragmentParser {
                 let start_idx = i;
                 let base_indent = Self::get_indent(line);
                 
-                // 查找 Pipeline 结束位置
                 let mut end_idx = lines.len();
                 for j in (i + 1)..lines.len() {
                     let next_indent = Self::get_indent(lines[j]);
@@ -115,7 +104,6 @@ impl FragmentParser {
         Ok(pipelines)
     }
     
-    /// 解析单个 Pipeline
     fn parse_single_pipeline(text: &str, id: &str) -> ParseResult<Pipeline> {
         let metrics = Self::extract_pipeline_metrics(text);
         let operators = Self::extract_operators(text);
@@ -127,7 +115,6 @@ impl FragmentParser {
         })
     }
     
-    /// 提取 Pipeline 的指标
     fn extract_pipeline_metrics(text: &str) -> HashMap<String, String> {
         let mut metrics = HashMap::new();
         
@@ -145,7 +132,6 @@ impl FragmentParser {
         metrics
     }
     
-    /// 提取 Pipeline 中的所有 Operator
     fn extract_operators(text: &str) -> Vec<Operator> {
         use crate::parser::core::operator_parser::OperatorParser;
         use crate::parser::core::MetricsParser;
@@ -158,10 +144,8 @@ impl FragmentParser {
             let trimmed = lines[i].trim();
             
             if OperatorParser::is_operator_header(trimmed) {
-                // 找到 operator header
                 let full_header = trimmed.trim_end_matches(':').to_string();
                 
-                // 提取纯粹的操作符类型名称（去掉plan_node_id部分）
                 let operator_name = if let Some(pos) = full_header.find(" (plan_node_id=") {
                     full_header[..pos].to_string()
                 } else {
@@ -170,7 +154,6 @@ impl FragmentParser {
                 
                 let base_indent = Self::get_indent(lines[i]);
                 
-                // 收集这个 operator 的所有内容（直到遇到下一个同级或更高级的内容）
                 let mut operator_lines = vec![lines[i]];
                 i += 1;
                 
@@ -183,7 +166,6 @@ impl FragmentParser {
                     
                     let current_indent = Self::get_indent(line);
                     
-                    // 如果缩进小于等于 base_indent，说明遇到了同级或更高级的内容
                     if current_indent <= base_indent {
                         break;
                     }
@@ -192,10 +174,8 @@ impl FragmentParser {
                     i += 1;
                 }
                 
-                // 解析这个 operator 的完整文本
                 let operator_text = operator_lines.join("\n");
                 
-                // 提取 plan_node_id (从 full_header 中解析，如 "CONNECTOR_SCAN (plan_node_id=0)")
                 let plan_node_id = if full_header.contains("plan_node_id=") {
                     full_header
                         .split("plan_node_id=")
@@ -206,8 +186,6 @@ impl FragmentParser {
                     None
                 };
                 
-                // 直接解析原始文本为HashMap，保留所有__MAX_OF_和__MIN_OF_指标
-                // 这对于多backend的情况至关重要
                 let common_metrics_text = MetricsParser::extract_common_metrics_block(&operator_text);
                 let unique_metrics_text = MetricsParser::extract_unique_metrics_block(&operator_text);
                 
@@ -230,7 +208,6 @@ impl FragmentParser {
         operators
     }
     
-    /// 将 metrics 文本解析为 HashMap
     fn parse_metrics_to_hashmap(text: &str) -> HashMap<String, String> {
         let mut metrics = HashMap::new();
         
@@ -238,7 +215,6 @@ impl FragmentParser {
             let trimmed = line.trim();
             if trimmed.starts_with("- ") {
                 let rest = trimmed.trim_start_matches("- ");
-                // 只跳过 __MIN_OF_ 指标，保留 __MAX_OF_ 指标用于覆盖基础值
                 if rest.starts_with("__MIN_OF_") {
                     continue;
                 }
@@ -248,7 +224,6 @@ impl FragmentParser {
                     let value = rest[colon_pos + 2..].trim().to_string();
                     metrics.insert(key, value);
                 } else if !rest.is_empty() {
-                    // 没有值的指标（如 IsSubordinate）
                     metrics.insert(rest.to_string(), "true".to_string());
                 }
             }
@@ -257,7 +232,6 @@ impl FragmentParser {
         metrics
     }
     
-    /// 提取 Backend 地址
     fn extract_backend_addresses(text: &str) -> Vec<String> {
         for line in text.lines() {
             let trimmed = line.trim();
@@ -269,7 +243,6 @@ impl FragmentParser {
         Vec::new()
     }
     
-    /// 提取 Instance ID
     fn extract_instance_ids(text: &str) -> Vec<String> {
         for line in text.lines() {
             let trimmed = line.trim();

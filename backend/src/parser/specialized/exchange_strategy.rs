@@ -1,4 +1,3 @@
-//! # ExchangeStrategy - Exchange Operator 专用指标解析策略
 
 use crate::models::{ExchangeSinkSpecializedMetrics, OperatorSpecializedMetrics};
 use super::strategy::SpecializedMetricsStrategy;
@@ -74,8 +73,7 @@ impl ExchangeSinkStrategy {
 
 impl SpecializedMetricsStrategy for ExchangeSourceStrategy {
     fn parse(&self, _text: &str) -> OperatorSpecializedMetrics {
-        // ExchangeSource 目前使用通用指标即可
-        // 如需特殊处理，可以在此实现
+
         OperatorSpecializedMetrics::None
     }
 }

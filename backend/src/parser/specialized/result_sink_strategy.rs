@@ -1,4 +1,3 @@
-//! # ResultSinkStrategy - ResultSink Operator 专用指标解析策略
 
 use crate::models::{OperatorSpecializedMetrics, ResultSinkSpecializedMetrics};
 use super::strategy::SpecializedMetricsStrategy;

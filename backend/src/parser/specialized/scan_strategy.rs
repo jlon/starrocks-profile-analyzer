@@ -1,6 +1,4 @@
-//! # ScanStrategy - Scan Operator 专用指标解析策略
 //! 
-//! 解析 OLAP_SCAN 和 CONNECTOR_SCAN 的专用指标。
 
 use crate::models::{
     OperatorSpecializedMetrics, OlapScanSpecializedMetrics, ConnectorScanSpecializedMetrics,
@@ -14,7 +12,6 @@ pub struct ScanStrategy;
 
 impl SpecializedMetricsStrategy for ScanStrategy {
     fn parse(&self, text: &str) -> OperatorSpecializedMetrics {
-        // 检测是 OLAP_SCAN 还是 CONNECTOR_SCAN
         let is_connector_scan = text.contains("CONNECTOR_SCAN") || text.contains("DataSourceType");
         
         if is_connector_scan {
@@ -89,7 +86,6 @@ impl ScanStrategy {
         for line in text.lines() {
             let trimmed = line.trim();
             
-            // 检测 section markers
             if trimmed == "IOStatistics:" || trimmed.starts_with("- IOStatistics:") {
                 _in_io_statistics = true;
                 in_io_task_exec = false;

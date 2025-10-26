@@ -7,9 +7,9 @@ impl HotSpotDetector {
     pub fn analyze(profile: &Profile) -> Vec<HotSpot> {
         let mut hotspots = Vec::new();
 
-        // 分析整体执行时间
+
         if let Ok(total_time_seconds) = Self::parse_duration(&profile.summary.total_time) {
-            if total_time_seconds > 3600.0 { // 超过1小时
+            if total_time_seconds > 3600.0 {
                 hotspots.push(HotSpot {
                     node_path: "Query".to_string(),
                     severity: HotSeverity::Severe,
@@ -24,21 +24,19 @@ impl HotSpotDetector {
             }
         }
 
-        // 优先分析execution_tree中的操作符 (如果存在)
         if let Some(execution_tree) = &profile.execution_tree {
             println!("🔍 Analyzing execution tree with {} nodes", execution_tree.nodes.len());
             for node in &execution_tree.nodes {
                 hotspots.extend(Self::analyze_execution_tree_node(node));
             }
         } else {
-            // 回退到分析Fragment结构
             println!("⚠️  No execution tree found, analyzing fragments");
             for fragment in &profile.fragments {
                 hotspots.extend(Self::analyze_fragment(fragment));
             }
         }
 
-        // 按严重度排序
+
         hotspots.sort_by(|a, b| {
             let severity_order = |severity: &HotSeverity| match severity {
                 HotSeverity::Normal => 0,
@@ -46,7 +44,7 @@ impl HotSpotDetector {
                 HotSeverity::Moderate => 2,
                 HotSeverity::Severe => 3,
                 HotSeverity::Critical => 4,
-                HotSeverity::High => 3, // High 和 Severe 同级
+                HotSeverity::High => 3,
             };
             severity_order(&b.severity).cmp(&severity_order(&a.severity))
         });
@@ -78,10 +76,9 @@ impl HotSpotDetector {
         let mut hotspots = Vec::new();
         let node_path = format!("Fragment{}.Pipeline{}.{}", fragment_id, pipeline_id, operator.name);
 
-        // 检查OperatorTotalTime
         if let Some(time_str) = operator.common_metrics.get("OperatorTotalTime") {
             if let Ok(time_seconds) = Self::parse_duration(time_str) {
-                if time_seconds > 300.0 { // 超过5分钟
+                if time_seconds > 300.0 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Severe,
@@ -97,9 +94,9 @@ impl HotSpotDetector {
             }
         }
 
-        // 检查内存使用
+
         if let Some(mem_bytes) = Self::parse_bytes(operator.common_metrics.get("MemoryUsage")) {
-            if mem_bytes > 1024 * 1024 * 1024 { // 超过1GB
+            if mem_bytes > 1024 * 1024 * 1024 {
                 hotspots.push(HotSpot {
                     node_path: node_path.clone(),
                     severity: HotSeverity::Moderate,
@@ -114,10 +111,10 @@ impl HotSpotDetector {
             }
         }
 
-        // 检查输出数据量异常
+
         if let Some(bytes_str) = operator.common_metrics.get("OutputChunkBytes") {
             if let Ok(bytes) = Self::parse_bytes_from_starrock(bytes_str) {
-                if bytes > 10 * 1024 * 1024 * 1024 { // 超过10GB
+                if bytes > 10 * 1024 * 1024 * 1024 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Moderate,
@@ -133,7 +130,7 @@ impl HotSpotDetector {
             }
         }
 
-        // 根据操作符类型进行专门分析
+
         match operator.name.as_str() {
             "CONNECTOR_SCAN" => {
                 println!("🚨 Found CONNECTOR_SCAN! Analyzing with metrics count: {}", operator.unique_metrics.len());
@@ -149,7 +146,7 @@ impl HotSpotDetector {
                 hotspots.extend(Self::analyze_aggregate_operator(fragment_id, pipeline_id, operator));
             }
             _ => {
-                // 通用操作符分析
+
                 println!("📝 Unknown operator type: {}", operator.name);
             }
         }
@@ -158,7 +155,6 @@ impl HotSpotDetector {
     }
 
     fn parse_duration(duration_str: &str) -> Result<f64, ()> {
-        // 解析StarRocks格式的持续时间，如 "1h30m", "5s499ms", "0ns"
         if duration_str.contains("h") {
             let hours: f64 = duration_str.split("h").next().unwrap_or("0").parse().unwrap_or(0.0);
             let minutes: f64 = duration_str.split("h").nth(1).unwrap_or("0").split("m").next().unwrap_or("0").parse().unwrap_or(0.0);
@@ -188,7 +184,6 @@ impl HotSpotDetector {
     }
 
     fn parse_bytes_from_starrock(bytes_str: &str) -> Result<u64, ()> {
-        // 解析StarRocks格式的字节数，如 "2.174K (2174)", "1.463 KB", "18.604 MB"
         let clean_str = bytes_str
             .split_whitespace()
             .next()
@@ -225,15 +220,13 @@ impl HotSpotDetector {
         format!("{:.2} {}", size, UNITS[unit_index])
     }
 
-    /// 分析CONNECTOR_SCAN操作符的热点
     fn analyze_connector_scan(fragment_id: &str, pipeline_id: &str, operator: &Operator) -> Vec<HotSpot> {
         let mut hotspots = Vec::new();
         let node_path = format!("Fragment{}.Pipeline{}.{}", fragment_id, pipeline_id, operator.name);
 
-        // 1. CreateSegmentIter时间过长 (核心瓶颈：Segment迭代器初始化耗时)
         if let Some(create_iter_time_str) = operator.unique_metrics.get("CreateSegmentIter") {
             if let Ok(create_seconds) = Self::parse_duration(create_iter_time_str) {
-                if create_seconds > 1800.0 { // 超过30分钟
+                if create_seconds > 1800.0 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Critical,
@@ -246,7 +239,7 @@ impl HotSpotDetector {
                             "定期监控table元数据大小".to_string(),
                         ],
                     });
-                } else if create_seconds > 300.0 { // 超过5分钟
+                } else if create_seconds > 300.0 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Severe,
@@ -262,10 +255,9 @@ impl HotSpotDetector {
             }
         }
 
-        // 2. SegmentsReadCount过多 (碎片化检测)
         if let Some(segment_count_str) = operator.unique_metrics.get("SegmentsReadCount") {
             if let Ok(segment_count) = segment_count_str.parse::<u64>() {
-                if segment_count > 100000 { // 超过10万个Segment
+                if segment_count > 100000 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Critical,
@@ -278,7 +270,7 @@ impl HotSpotDetector {
                             "考虑分区重构减少热点分区的Segment数量".to_string(),
                         ],
                     });
-                } else if segment_count > 50000 { // 超过5万个Segment
+                } else if segment_count > 50000 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Severe,
@@ -290,7 +282,7 @@ impl HotSpotDetector {
                             "考虑调整cumulative_compaction_num_deltas参数".to_string(),
                         ],
                     });
-                } else if segment_count > 10000 { // 超过1万个Segment
+                } else if segment_count > 10000 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Moderate,
@@ -305,12 +297,11 @@ impl HotSpotDetector {
             }
         }
 
-        // 3. 远程存储瓶颈检测 (LakeDataSource分析)
         if let Some(remote_io_time_str) = operator.unique_metrics.get("IOTimeRemote") {
             if let Ok(remote_io_seconds) = Self::parse_duration(remote_io_time_str) {
                 if let Some(total_scan_time_str) = operator.common_metrics.get("ScanTime") {
                     if let Ok(total_scan_seconds) = Self::parse_duration(total_scan_time_str) {
-                        if remote_io_seconds > total_scan_seconds * 0.8 { // 远程IO占扫描时间的80%以上
+                        if remote_io_seconds > total_scan_seconds * 0.8 {
                             hotspots.push(HotSpot {
                                 node_path: node_path.clone(),
                                 severity: HotSeverity::Severe,
@@ -330,10 +321,9 @@ impl HotSpotDetector {
             }
         }
 
-        // 4. 扫描时间过长 (综合时间检测)
         if let Some(scan_time_str) = operator.common_metrics.get("ScanTime") {
             if let Ok(scan_seconds) = Self::parse_duration(scan_time_str) {
-                if scan_seconds > 3600.0 { // 超过1小时
+                if scan_seconds > 3600.0 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Critical,
@@ -346,7 +336,7 @@ impl HotSpotDetector {
                             "考虑分区裁剪和谓词下推优化".to_string(),
                         ],
                     });
-                } else if scan_seconds > 1800.0 { // 超过30分钟
+                } else if scan_seconds > 1800.0 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Severe,
@@ -362,10 +352,9 @@ impl HotSpotDetector {
             }
         }
 
-        // 5. I/O时间过长 (详细IO分析)
         if let Some(io_time_str) = operator.unique_metrics.get("IOTime") {
             if let Ok(io_seconds) = Self::parse_duration(io_time_str) {
-                if io_seconds > 1200.0 { // 超过20分钟
+                if io_seconds > 1200.0 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Severe,
@@ -381,13 +370,11 @@ impl HotSpotDetector {
             }
         }
 
-        // 6. 远程读取完全依赖 (100%远程读取)
         if let Some(remote_count_str) = operator.unique_metrics.get("IOCountRemote") {
             if let Ok(remote_count) = remote_count_str.parse::<u64>() {
                 if let Some(local_count_str) = operator.unique_metrics.get("IOCountLocalDisk") {
                     if let Ok(local_count) = local_count_str.parse::<u64>() {
                         if remote_count > 0 && local_count == 0 {
-                            // 100% 远程读取
                             hotspots.push(HotSpot {
                                 node_path: node_path.clone(),
                                 severity: HotSeverity::High,
@@ -401,7 +388,7 @@ impl HotSpotDetector {
                                 ],
                             });
                         } else if remote_count > local_count * 10 {
-                            // 远程读取远超本地
+
                             hotspots.push(HotSpot {
                                 node_path: node_path.clone(),
                                 severity: HotSeverity::Moderate,
@@ -419,7 +406,6 @@ impl HotSpotDetector {
             }
         }
 
-        // 7. 无谓词过滤但读取大量数据
         let has_effective_filtering = operator.unique_metrics.get("ShortKeyFilterRows")
             .and_then(|s| s.parse::<u64>().ok())
             .map(|rows| rows > 0)
@@ -428,7 +414,7 @@ impl HotSpotDetector {
         if !has_effective_filtering {
             if let Some(raw_rows_str) = operator.unique_metrics.get("RawRowsRead") {
                 if let Ok(raw_rows) = raw_rows_str.parse::<u64>() {
-                    if raw_rows > 100000 { // 读取大量原始数据但无过滤
+                    if raw_rows > 100000 {
                         hotspots.push(HotSpot {
                             node_path: node_path.clone(),
                             severity: HotSeverity::High,
@@ -457,10 +443,9 @@ impl HotSpotDetector {
             }
         }
 
-        // 8. 线程池资源不足 (扫描任务队列积压)
         if let Some(pending_tasks_str) = operator.unique_metrics.get("PeakScanTaskQueueSize") {
             if let Ok(queue_size) = pending_tasks_str.parse::<u64>() {
-                if queue_size > 50 { // 队列积压严重
+                if queue_size > 50 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Severe,
@@ -488,12 +473,10 @@ impl HotSpotDetector {
             }
         }
 
-        // 9. 并行度过低检测 (来自Fragment/Pipeline级别)
-        // 这个需要在更上层做，但这里可以检查扫描相关的并行度指标
+
         if let Some(parallelism_str) = operator.common_metrics.get("DegreeOfParallelism") {
             if let Ok(parallelism) = parallelism_str.parse::<u64>() {
                 if parallelism == 1 && operator.common_metrics.get("ScanTime").is_some() {
-                    // 并行度为1但有扫描操作，可能是问题
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Moderate,
@@ -512,24 +495,20 @@ impl HotSpotDetector {
         hotspots
     }
 
-    /// 分析OLAP_SCAN操作符的热点
     fn analyze_olap_scan(fragment_id: &str, pipeline_id: &str, operator: &Operator) -> Vec<HotSpot> {
         let hotspots = Vec::new();
         let _node_path = format!("Fragment{}.Pipeline{}.{}", fragment_id, pipeline_id, operator.name);
 
-        // OLAP_SCAN专用的检查逻辑
-        // 检查扫描时间和数据量等指标
-        // TODO: 实现OLAP_SCAN特定的热点检测规则
+
 
         hotspots
     }
 
-    /// 分析JOIN操作符的热点
     fn analyze_join_operator(fragment_id: &str, pipeline_id: &str, operator: &Operator) -> Vec<HotSpot> {
         let mut hotspots = Vec::new();
         let node_path = format!("Fragment{}.Pipeline{}.{}", fragment_id, pipeline_id, operator.name);
 
-        // 检查构建侧和探测侧的数据量比例
+
         let build_rows = operator.unique_metrics.get("BuildRows")
             .and_then(|s| s.parse::<u64>().ok());
         let probe_rows = operator.unique_metrics.get("ProbeRows")
@@ -537,7 +516,7 @@ impl HotSpotDetector {
 
         if let (Some(build), Some(probe)) = (build_rows, probe_rows) {
             if build > probe * 100 || probe > build * 100 {
-                // 数据倾斜严重
+
                 hotspots.push(HotSpot {
                     node_path: node_path.clone(),
                     severity: HotSeverity::High,
@@ -552,9 +531,9 @@ impl HotSpotDetector {
                 });
             }
 
-            // 检查内存使用是否合理
+
             if let Some(mem_usage) = Self::parse_bytes(operator.common_metrics.get("MemoryUsage")) {
-                let expected_mem = (build + probe) * 100; // 粗略估计每行100字节
+                let expected_mem = (build + probe) * 100;
                 if mem_usage > expected_mem * 2 {
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
@@ -574,15 +553,14 @@ impl HotSpotDetector {
         hotspots
     }
 
-    /// 分析AGGREGATE操作符的热点
     fn analyze_aggregate_operator(fragment_id: &str, pipeline_id: &str, operator: &Operator) -> Vec<HotSpot> {
         let mut hotspots = Vec::new();
         let node_path = format!("Fragment{}.Pipeline{}.{}", fragment_id, pipeline_id, operator.name);
 
-        // 检查聚合模式
+
         if let Some(agg_mode) = operator.unique_metrics.get("AggMode") {
             if agg_mode == "two_phase" {
-                // 使用了两阶段聚合，检查是否有优化空间
+
                 if let Some(chunk_by_chunk) = operator.unique_metrics.get("ChunkByChunk") {
                     if chunk_by_chunk == "false" {
                         hotspots.push(HotSpot {
@@ -600,7 +578,7 @@ impl HotSpotDetector {
             }
         }
 
-        // 检查预聚合效果
+
         let input_rows = operator.unique_metrics.get("InputRows")
             .and_then(|s| s.parse::<u64>().ok());
         let output_rows = operator.common_metrics.get("PushRowNum")
@@ -610,7 +588,7 @@ impl HotSpotDetector {
             if input > 0 && output > 0 {
                 let agg_ratio = input as f64 / output as f64;
                 if agg_ratio < 2.0 {
-                    // 聚合效果差
+
                     hotspots.push(HotSpot {
                         node_path: node_path.clone(),
                         severity: HotSeverity::Mild,
@@ -630,18 +608,16 @@ impl HotSpotDetector {
         hotspots
     }
 
-    /// 分析ExecutionTree中的单个节点
     fn analyze_execution_tree_node(node: &ExecutionTreeNode) -> Vec<HotSpot> {
         let mut hotspots = Vec::new();
         let node_path = format!("{} ({})", node.operator_name, node.id);
 
-        // 1. 检查执行时间热点
         if let Some(total_time) = node.metrics.operator_total_time {
             let millis = total_time as f64;
             let (threshold, severity) = match millis {
-                t if t > 300000.0 => (millis, HotSeverity::Critical),      // > 5分钟
-                t if t > 60000.0 => (millis, HotSeverity::Severe),         // > 1分钟
-                t if t > 10000.0 => (millis, HotSeverity::High),           // > 10秒
+                t if t > 300000.0 => (millis, HotSeverity::Critical),
+                t if t > 60000.0 => (millis, HotSeverity::Severe),
+                t if t > 10000.0 => (millis, HotSeverity::High),
                 _ => (0.0, HotSeverity::Normal),
             };
             
@@ -671,7 +647,6 @@ impl HotSpotDetector {
             }
         }
 
-        // 2. 检查I/O性能热点（针对扫描操作符）
         if let OperatorSpecializedMetrics::ConnectorScan(ref scan_metrics) = node.metrics.specialized {
             if let (Some(io_time), Some(scan_time)) = (scan_metrics.io_time, scan_metrics.scan_time) {
                 let io_ratio = io_time.as_millis() as f64 / (scan_time.as_millis().max(1) as f64);
@@ -691,9 +666,8 @@ impl HotSpotDetector {
             }
         }
 
-        // 3. 检查输出数据量（可能导致下游压力）
         if let Some(output_bytes) = node.metrics.output_chunk_bytes {
-            if output_bytes > 1024 * 1024 * 100 { // > 100MB
+            if output_bytes > 1024 * 1024 * 100 {
                 hotspots.push(HotSpot {
                     node_path: node_path.clone(),
                     severity: HotSeverity::Mild,
@@ -710,5 +684,4 @@ impl HotSpotDetector {
         hotspots
     }
 
-    // dead code removed
 }

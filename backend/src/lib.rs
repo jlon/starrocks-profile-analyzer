@@ -3,14 +3,13 @@ pub mod models;
 pub mod analyzer;
 pub mod api;
 pub mod constants;
+pub mod static_files;
 
 pub use models::*;
 pub use analyzer::hotspot_detector::HotSpotDetector;
 pub use analyzer::suggestion_engine::SuggestionEngine;
-// Primary parser API
 pub use parser::ProfileComposer;
 
-/// Analyze profile using the new ProfileComposer
 pub fn analyze_profile(profile_text: &str) -> Result<ProfileAnalysisResponse, String> {
     let mut composer = ProfileComposer::new();
     let profile = composer.parse(profile_text)

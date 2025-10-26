@@ -4,15 +4,12 @@ use std::time::Duration;
 pub struct SuggestionEngine;
 
 impl SuggestionEngine {
-    /// 执行概览快速检查 (基于 tuning recipes 第1步)
     pub fn quick_execution_overview_check(profile: &Profile) -> Vec<HotSpot> {
         let mut hotspots = Vec::new();
 
-        // 检查QueryPeakMemoryUsagePerNode > 80%的情形
         if let Some(mem_usage_str) = profile.execution.metrics.get("QueryPeakMemoryUsagePerNode") {
             if let Ok(mem_bytes) = Self::parse_bytes(mem_usage_str) {
-                // 假设BE有足够内存，这里检查是否超过80%的查询内存
-                let total_memory = 12_884_901_888u64; // 12GB假设值，可配置
+                let total_memory = 12_884_901_888u64;
                 let mem_percentage = (mem_bytes as f64 / total_memory as f64) * 100.0;
                 if mem_percentage > 80.0 {
                     hotspots.push(HotSpot {
@@ -31,10 +28,9 @@ impl SuggestionEngine {
             }
         }
 
-        // 检查QuerySpillBytes > 1GB的情形
         if let Some(spill_str) = profile.execution.metrics.get("QuerySpillBytes") {
             if let Ok(spill_bytes) = Self::parse_bytes(spill_str) {
-                if spill_bytes > 1_073_741_824 { // 1GB
+                if spill_bytes > 1_073_741_824 {
                     hotspots.push(HotSpot {
                         node_path: "Execution.Overview".to_string(),
                         severity: HotSeverity::High,
@@ -54,7 +50,6 @@ impl SuggestionEngine {
         hotspots
     }
 
-    /// 定位最慢的操作符 (基于 tuning recipes 第2步)
     pub fn find_slowest_operators(profile: &Profile) -> Vec<OperatorSummary> {
         let mut operators = Vec::new();
 
@@ -77,13 +72,12 @@ impl SuggestionEngine {
             }
         }
 
-        // 按时间倒序排序
+
         operators.sort_by(|a, b| b.total_time.cmp(&a.total_time));
-        operators.truncate(10); // 只保留前10个最慢的
+        operators.truncate(10);
         operators
     }
 
-    /// 基于tuning recipes的诊断生成
     pub fn generate_official_recipes(hotspot_type: &str, _context: &OperatorContext) -> Vec<String> {
         match hotspot_type {
             "cold_storage" => vec![
@@ -153,7 +147,7 @@ impl SuggestionEngine {
                 moderate_count,
                 Self::format_duration(total_time)
             )
-        } else if total_time > 300.0f64 { // 超过5分钟
+        } else if total_time > 300.0f64 {
             format!("查询执行时间较长（{}），建议关注性能热点。", Self::format_duration(total_time))
         } else {
             format!("查询发现{}个小问题，整体性能可接受。", hotspots.len())
@@ -174,7 +168,7 @@ impl SuggestionEngine {
             }
         }
 
-        // 添加通用建议
+
         let general_suggestions = vec![
             "考虑启用查询缓存以提高重复查询的性能".to_string(),
             "检查硬件资源（CPU、内存、存储）是否充足".to_string(),
@@ -194,7 +188,7 @@ impl SuggestionEngine {
     pub fn calculate_performance_score(hotspots: &[HotSpot], profile: &Profile) -> f64 {
         let mut score: f64 = 100.0;
 
-        // 根据热点严重度扣分
+
         for hotspot in hotspots {
             let penalty = match hotspot.severity {
                 HotSeverity::Critical => 25.0,
@@ -207,23 +201,21 @@ impl SuggestionEngine {
             score -= penalty;
         }
 
-        // 根据执行时间扣分
+
         if let Ok(total_seconds) = Self::parse_total_time(&profile.summary.total_time) {
-            if total_seconds > 3600.0 { // 超过1小时
+            if total_seconds > 3600.0 {
                 score -= 20.0;
-            } else if total_seconds > 1800.0 { // 超过30分钟
+            } else if total_seconds > 1800.0 {
                 score -= 10.0;
-            } else if total_seconds > 300.0 { // 超过5分钟
+            } else if total_seconds > 300.0 {
                 score -= 5.0;
             }
         }
 
-        // 确保分数不低于0
         score.max(0.0)
     }
 
     fn parse_total_time(time_str: &str) -> Result<f64, ()> {
-        // 简化的时间解析，实际使用HotSpotDetector::parse_duration
         if let Some(hours_part) = time_str.split("h").next() {
             if let Ok(hours) = hours_part.parse::<f64>() {
                 let minutes_str = time_str.split("h").nth(1).unwrap_or("0").replace("m", "");
@@ -246,7 +238,6 @@ impl SuggestionEngine {
     }
 
     pub fn parse_memory_percentage(mem_str: &str) -> Result<f64, ()> {
-        // 假设内存字符串格式如 "80.5%" 或者字节数
         if mem_str.contains('%') {
             mem_str.replace('%', "").trim().parse::<f64>().map_err(|_| ())
         } else {
@@ -255,7 +246,6 @@ impl SuggestionEngine {
     }
 
     pub fn parse_bytes(bytes_str: &str) -> Result<u64, ()> {
-        // 解析 StarRocks 格式的字节字符串，如 "1.463 KB", "18.604 MB", "0.000 B"
         let trimmed = bytes_str.trim();
         let parts: Vec<&str> = trimmed.split_whitespace().collect();
 
@@ -293,7 +283,6 @@ impl SuggestionEngine {
     }
 
     pub fn parse_duration(duration_str: &str) -> Result<Duration, ()> {
-        // 解析 StarRocks 时间格式，如 "7s854ms", "1h30m", "5s499ms"
         let mut total_nanos: u128 = 0;
 
         let re = regex::Regex::new(r"(\d+)([hms]|ms|us|ns)").map_err(|_| ())?;

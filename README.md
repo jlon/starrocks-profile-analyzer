@@ -34,40 +34,40 @@ StarRocks Profile Analyzer is a powerful tool designed to parse, analyze, and vi
 #### Prerequisites
 
 - Rust 1.70+
-- Node.js 18+
-- npm or yarn
+- Node.js 18+ (only for building from source)
+- make
 
-#### Installation
+#### Installation & Build
 
 ```bash
 # Clone the repository
 git clone https://github.com/jlon/starrocks-profile-analyzer.git
 cd starrocks-profile-analyzer
 
-# One-command startup
-./start_all.sh
+# Build single executable with embedded frontend
+make build
 ```
 
-#### Manual Setup
+This will create a single executable at `build/starrocks-profile-analyzer` with all frontend assets embedded.
 
-**Backend:**
-```bash
-cd backend
-cargo build --release
-./target/release/starrocks-profile-analyzer
-```
+#### Run
 
-**Frontend:**
 ```bash
-cd frontend
-npm install
-npm run build
-npx http-server dist -p 8080
+# Run with default settings (port 3030)
+./build/starrocks-profile-analyzer
+
+# Run with custom port
+./build/starrocks-profile-analyzer --port 8080
+
+# Run with custom host and port
+./build/starrocks-profile-analyzer --host 127.0.0.1 --port 8080
+
+# Show help
+./build/starrocks-profile-analyzer --help
 ```
 
 **Access:**
-- Frontend: http://localhost:8080
-- Backend API: http://localhost:3030
+- Web UI & API: http://localhost:3030 (or your custom port)
 
 ### Usage
 
@@ -94,8 +94,14 @@ curl http://localhost:3030/health
 **Analyze Text:**
 ```bash
 curl -X POST http://localhost:3030/analyze \
-  -H "Content-Type: application/json" \
+  -H "Content-Type": "application/json" \
   -d '{"profile_text": "Your profile content"}'
+```
+
+**Analyze File:**
+```bash
+curl -X POST http://localhost:3030/analyze-file \
+  -F "file=@/path/to/profile.txt"
 ```
 
 **Upload File:**
@@ -183,40 +189,40 @@ StarRocks Profile 分析器是一款专业的查询性能分析工具，用于�
 #### 环境要求
 
 - Rust 1.70+
-- Node.js 18+
-- npm 或 yarn
+- Node.js 18+（仅构建时需要）
+- make
 
-#### 安装
+#### 安装与构建
 
 ```bash
 # 克隆项目
 git clone https://github.com/jlon/starrocks-profile-analyzer.git
 cd starrocks-profile-analyzer
 
-# 一键启动
-./start_all.sh
+# 构建单一可执行文件（内嵌前端资源）
+make build
 ```
 
-#### 手动启动
+这将在 `build/starrocks-profile-analyzer` 生成一个包含所有前端资源的单一可执行文件。
 
-**后端：**
-```bash
-cd backend
-cargo build --release
-./target/release/starrocks-profile-analyzer
-```
+#### 运行
 
-**前端：**
 ```bash
-cd frontend
-npm install
-npm run build
-npx http-server dist -p 8080
+# 使用默认配置运行（端口 3030）
+./build/starrocks-profile-analyzer
+
+# 自定义端口运行
+./build/starrocks-profile-analyzer --port 8080
+
+# 自定义主机和端口
+./build/starrocks-profile-analyzer --host 127.0.0.1 --port 8080
+
+# 查看帮助
+./build/starrocks-profile-analyzer --help
 ```
 
 **访问：**
-- 前端界面：http://localhost:8080
-- 后端 API：http://localhost:3030
+- Web 界面 & API：http://localhost:3030（或您自定义的端口）
 
 ### 使用指南
 
@@ -247,10 +253,10 @@ curl -X POST http://localhost:3030/analyze \
   -d '{"profile_text": "Profile 文本内容"}'
 ```
 
-**文件上传：**
+**文件分析：**
 ```bash
 curl -X POST http://localhost:3030/analyze-file \
-  -F "file=@profile.txt"
+  -F "file=@/path/to/profile.txt"
 ```
 
 ### 架构

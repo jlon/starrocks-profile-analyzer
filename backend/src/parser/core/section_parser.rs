@@ -1,10 +1,4 @@
-//! # SectionParser - 章节解析器
 //! 
-//! 负责识别和提取 Profile 的各个章节：
-//! - Summary: 查询摘要信息
-//! - Planner: 计划器信息
-//! - Execution: 执行信息
-//! - Fragment: Fragment 块
 
 use crate::models::{ProfileSummary, PlannerInfo, ExecutionInfo};
 use crate::parser::error::{ParseError, ParseResult};
@@ -19,15 +13,7 @@ static SUMMARY_LINE_REGEX: Lazy<Regex> =
 pub struct SectionParser;
 
 impl SectionParser {
-    /// 提取 Summary 章节并解析
     ///
-    /// # Profile Format
-    /// ```text
-    /// Query:
-    ///   Summary:
-    ///      - Query ID: xxx
-    ///      - Start Time: xxx
-    ///      - Total: 1h30m
     /// ```
     pub fn parse_summary(text: &str) -> ParseResult<ProfileSummary> {
         let summary_block = Self::extract_block(text, "Summary:")?;
@@ -52,25 +38,22 @@ impl SectionParser {
             query_type: fields.get("Query Type").cloned(),
             user: fields.get("User").cloned(),
             default_db: fields.get("Default Db").cloned(),
-            variables: HashMap::new(), // 需要进一步解析
+            variables: HashMap::new(),
             query_allocated_memory: None,
             query_peak_memory: None,
             push_total_time: None,
             pull_total_time: None,
             total_time_ms: Self::parse_total_time_ms(&fields.get("Total").cloned().unwrap_or_default()),
-            // 解析 QueryCumulativeOperatorTime 字段
             query_cumulative_operator_time: fields.get("QueryCumulativeOperatorTime").cloned(),
             query_cumulative_operator_time_ms: fields.get("QueryCumulativeOperatorTime")
                 .and_then(|time_str| Self::parse_total_time_ms(time_str)),
-            // 解析 QueryExecutionWallTime 字段（用于百分比计算）
             query_execution_wall_time: fields.get("QueryExecutionWallTime").cloned(),
             query_execution_wall_time_ms: fields.get("QueryExecutionWallTime")
                 .and_then(|time_str| Self::parse_total_time_ms(time_str)),
-            top_time_consuming_nodes: None, // 将在composer中计算
+            top_time_consuming_nodes: None,
         })
     }
     
-    /// 提取 Planner 章节并解析
     pub fn parse_planner(text: &str) -> ParseResult<PlannerInfo> {
         let planner_block = Self::extract_block(text, "Planner:")?;
         let mut details = HashMap::new();
@@ -86,14 +69,12 @@ impl SectionParser {
         Ok(PlannerInfo { details })
     }
     
-    /// 提取 Execution 章节并解析
     pub fn parse_execution(text: &str) -> ParseResult<ExecutionInfo> {
         let execution_block = Self::extract_block(text, "Execution:")?;
         
-        // 提取 Topology
         let topology = Self::extract_topology(&execution_block)?;
         
-        // 提取其他指标
+
         let mut metrics = HashMap::new();
         for line in execution_block.lines() {
             if let Some(cap) = SUMMARY_LINE_REGEX.captures(line) {
@@ -108,9 +89,7 @@ impl SectionParser {
         Ok(ExecutionInfo { topology, metrics })
     }
     
-    /// 提取 Fragment 块列表
     ///
-    /// 返回每个 Fragment 的文本块及其 ID
     pub fn extract_fragments(text: &str) -> Vec<(String, String)> {
         let mut fragments = Vec::new();
         let lines: Vec<&str> = text.lines().collect();
@@ -119,12 +98,10 @@ impl SectionParser {
         while i < lines.len() {
             let line = lines[i].trim();
             
-            // 匹配 "Fragment N:"
             if let Some(id) = Self::extract_fragment_id(line) {
                 let start_idx = i;
                 let base_indent = Self::get_indent(lines[i]);
                 
-                // 查找下一个 Fragment 或文件结束
                 let mut end_idx = lines.len();
                 for j in (i + 1)..lines.len() {
                     let next_indent = Self::get_indent(lines[j]);
@@ -145,11 +122,9 @@ impl SectionParser {
         fragments
     }
     
-    // ========== Private Helper Methods ==========
     
     fn extract_block(text: &str, section_marker: &str) -> ParseResult<String> {
         if let Some(start) = text.find(section_marker) {
-            // 找到section_marker所在行的缩进级别
             let before_marker = &text[..start];
             let marker_line_start = before_marker.rfind('\n').map(|pos| pos + 1).unwrap_or(0);
             let marker_line = &text[marker_line_start..start + section_marker.len()];
@@ -158,17 +133,17 @@ impl SectionParser {
             let rest = &text[start + section_marker.len()..];
             let lines: Vec<&str> = rest.lines().collect();
             
-            // 找到下一个同级或更高级别的章节
+
             let mut end_pos = rest.len();
             for (i, line) in lines.iter().enumerate().skip(1) {
                 if !line.trim().is_empty() {
                     let curr_indent = Self::get_indent(line);
-                    // 如果遇到同级或更高级别的章节标记（以冒号结尾），则结束
+
                     if curr_indent <= marker_indent && line.trim().ends_with(':') {
-                        // 计算到当前行的字符位置
+
                         let mut char_count = 0;
                         for j in 0..i {
-                            char_count += lines[j].len() + 1; // +1 for newline
+                            char_count += lines[j].len() + 1;
                         }
                         end_pos = char_count;
                         break;
@@ -183,13 +158,11 @@ impl SectionParser {
     }
     
     fn extract_topology(text: &str) -> ParseResult<String> {
-        // Topology 是一个 JSON，需要完整提取
         if let Some(start_pos) = text.find("- Topology:") {
             let after_label = &text[start_pos + 11..];
             if let Some(json_start) = after_label.find('{') {
                 let json_part = &after_label[json_start..];
                 
-                // 简单的括号匹配来提取完整 JSON
                 let mut depth = 0;
                 let mut end_pos = 0;
                 

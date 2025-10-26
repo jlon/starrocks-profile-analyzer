@@ -1,4 +1,3 @@
-// Specialized metrics parsers using strategy pattern
 
 pub mod strategy;
 pub mod scan_strategy;
@@ -7,10 +6,8 @@ pub mod join_strategy;
 pub mod aggregate_strategy;
 pub mod result_sink_strategy;
 
-// Re-exports
 pub use strategy::SpecializedMetricsStrategy;
 
-// Main parser structure that uses strategy pattern
 #[derive(Debug, Clone)]
 pub struct SpecializedMetricsParser {
     scan: ScanStrategy,

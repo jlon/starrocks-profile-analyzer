@@ -1,30 +1,31 @@
 <template>
   <div class="dag-wrapper">
-    <!-- 工具栏 -->
-    <div class="dag-toolbar">
-      <div class="toolbar-left">
-        <el-button-group>
-          <el-button @click="resetView" size="small">
-            <i class="fas fa-home"></i> 重置
-          </el-button>
-          <el-button @click="zoomIn" size="small">
-            <i class="fas fa-plus"></i>
-          </el-button>
-          <el-button @click="zoomOut" size="small">
-            <i class="fas fa-minus"></i>
-          </el-button>
-          <el-button @click="fitToScreen" size="small">
-            <i class="fas fa-compress"></i>
-          </el-button>
-        </el-button-group>
-      </div>
-      <div class="zoom-level">{{ (zoom * 100).toFixed(0) }}%</div>
-    </div>
-
     <!-- 主容器 -->
     <div class="dag-main">
       <!-- SVG 画布 -->
       <div class="dag-canvas-wrapper">
+        <!-- 右上角工具栏 -->
+        <div class="dag-toolbar-right">
+          <button @click="zoomIn" class="toolbar-icon-btn" title="放大">
+            <i class="fas fa-search-plus"></i>
+          </button>
+          <button @click="zoomOut" class="toolbar-icon-btn" title="缩小">
+            <i class="fas fa-search-minus"></i>
+          </button>
+          <button @click="fitToScreen" class="toolbar-icon-btn" title="适应屏幕">
+            <i class="fas fa-expand"></i>
+          </button>
+          <button @click="resetView" class="toolbar-icon-btn" title="重置视图">
+            <i class="fas fa-redo"></i>
+          </button>
+          <button @click="downloadAsImage" class="toolbar-icon-btn" title="下载图片">
+            <i class="fas fa-download"></i>
+          </button>
+          <button @click="copyToClipboard" class="toolbar-icon-btn" title="复制">
+            <i class="fas fa-copy"></i>
+          </button>
+        </div>
+
         <svg 
           ref="dagSvg"
           class="dag-svg"
@@ -37,26 +38,26 @@
           @mouseleave="endPan"
         >
           <defs>
-            <!-- 箭头标记 -->
+            <!-- 箭头标记（精致小巧版） -->
             <marker
               id="arrow"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
+              markerWidth="6"
+              markerHeight="6"
+              refX="4"
               refY="3"
               orient="auto"
             >
-              <polygon points="0 0, 10 3, 0 6" fill="#999" />
+              <polygon points="0 0, 5 3, 0 6" fill="#BDBDBD" />
             </marker>
             <marker
               id="arrow-red"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
+              markerWidth="6"
+              markerHeight="6"
+              refX="4"
               refY="3"
               orient="auto"
             >
-              <polygon points="0 0, 10 3, 0 6" fill="#ff6b6b" />
+              <polygon points="0 0, 5 3, 0 6" fill="#E57373" />
             </marker>
             
             <!-- 圆形标记（起点） -->
@@ -119,7 +120,7 @@
                 class="connection-line"
                 :class="{ 'connection-hotspot': link.isHotspot }"
                 :marker-end="`url(#${link.isHotspot ? 'arrow-red' : 'arrow'})`"
-                :marker-start="`url(#circle-${link.isHotspot ? 'red' : 'normal'})`"
+                :style="{ strokeWidth: link.strokeWidth + 'px' }"
               />
               
               <!-- 行数标签 -->
@@ -144,46 +145,71 @@
                 :class="{ selected: selectedNodeId === node.id }"
                 @click.stop="selectNode(node)"
               >
-                <!-- 节点背景 -->
+                <!-- 节点头部（深灰色背景，上圆角） -->
                 <rect
-                  class="node-rect"
-                  :class="{
-                    'node-hotspot': node.is_hotspot,
-                    'node-most-consuming': node.is_most_consuming,
-                    'node-second-consuming': node.is_second_most_consuming
-                  }"
+                  class="node-header"
+                  :class="`node-header-${getNodeColorClass(node)}`"
+                  :width="NODE_WIDTH"
+                  :height="NODE_HEADER_HEIGHT"
+                  rx="2"
+                  ry="2"
+                />
+
+                <!-- 节点主体（白色背景，无圆角） -->
+                <rect
+                  class="node-body"
+                  :class="`node-body-${getNodeColorClass(node)}`"
+                  :width="NODE_WIDTH"
+                  :y="NODE_HEADER_HEIGHT"
+                  :height="NODE_BODY_HEIGHT"
+                />
+
+                <!-- 进度条背景（浅灰色，下圆角） -->
+                <rect
+                  class="progress-bg"
+                  :y="NODE_HEADER_HEIGHT + NODE_BODY_HEIGHT"
+                  :width="NODE_WIDTH"
+                  :height="NODE_PROGRESS_HEIGHT"
+                />
+
+                <!-- 进度条填充（彩色，下圆角） -->
+                <rect
+                  class="progress-fill"
+                  :y="NODE_HEADER_HEIGHT + NODE_BODY_HEIGHT"
+                  :width="getProgressWidth(node)"
+                  :height="NODE_PROGRESS_HEIGHT"
+                  :fill="getProgressColor(node)"
+                />
+
+                <!-- 节点整体边框（圆角边框） -->
+                <rect
+                  class="node-border"
                   :width="NODE_WIDTH"
                   :height="NODE_HEIGHT"
-                  rx="4"
-                  ry="4"
+                  rx="2"
+                  ry="2"
+                  fill="none"
+                  stroke="#E0E0E0"
+                  stroke-width="1"
                 />
 
-                <!-- 热点指示 -->
-                <circle
-                  v-if="node.is_hotspot"
-                  class="hotspot-badge"
-                  cx="8"
-                  cy="8"
-                  r="4"
-                />
-
-                <!-- 操作符名称 -->
-                <text class="node-title" x="10" y="22">
+                <!-- 头部操作符名称（黑色文字） -->
+                <text class="node-title-header" x="10" y="19">
                   {{ node.operator_name }}
                 </text>
 
-                <!-- plan_node_id -->
-                <text class="node-info" x="10" y="38">
+                <!-- 主体：plan_node_id -->
+                <text class="node-info-detail" x="10" :y="NODE_HEADER_HEIGHT + 15">
                   plan_node_id={{ node.plan_node_id }}
                 </text>
 
-                <!-- 执行时间 -->
-                <text class="node-info" x="10" y="54">
-                  {{ formatDuration(node.metrics.operator_total_time_raw || node.metrics.operator_total_time) }}
+                <!-- 主体：执行时间 -->
+                <text class="node-info-detail" x="10" :y="NODE_HEADER_HEIGHT + 30">
+                  耗时: {{ formatDuration(node.metrics.operator_total_time_raw || node.metrics.operator_total_time) }}
                 </text>
 
-                <!-- 性能百分比 -->
-                <text class="node-percentage" :x="NODE_WIDTH - 10" y="32">
+                <!-- 主体：性能百分比（右对齐） -->
+                <text class="node-percentage-value" :x="NODE_WIDTH - 10" :y="NODE_HEADER_HEIGHT + 30" text-anchor="end">
                   {{ getPercentage(node) }}%
                 </text>
               </g>
@@ -194,8 +220,8 @@
 
       <!-- 右侧详情面板 -->
       <div class="detail-panel">
-        <!-- 执行概览（未选中节点时显示） -->
-        <div v-if="!selectedNodeId" class="execution-overview">
+        <!-- Top 10 & 总览（未选中节点时显示） -->
+        <div v-if="!selectedNodeId" class="top-panel">
           <div class="overview-header">
             <h3>执行概览</h3>
                     </div>
@@ -344,32 +370,24 @@
                 </div>
 
                 <!-- 通用执行指标 -->
-                <div class="metrics-section" style="margin-top: 20px">
+                <div v-if="hasMetricsToShow(selectedNode)" class="metrics-section" style="margin-top: 20px">
                   <h5>执行指标</h5>
                   <div class="metrics-grid">
-                    <div v-if="selectedNode.metrics.push_chunk_num" class="metric">
+                    <div v-if="hasMetric(selectedNode.metrics, 'push_chunk_num')" class="metric">
                       <span class="metric-label">推入数据块</span>
-                      <span class="metric-value">{{
-                        selectedNode.metrics.push_chunk_num || "N/A"
-                      }}</span>
+                      <span class="metric-value">{{ selectedNode.metrics.push_chunk_num }}</span>
                     </div>
-                    <div v-if="selectedNode.metrics.push_row_num" class="metric">
+                    <div v-if="hasMetric(selectedNode.metrics, 'push_row_num')" class="metric">
                       <span class="metric-label">推入行数</span>
-                      <span class="metric-value">{{
-                        selectedNode.metrics.push_row_num || "N/A"
-                      }}</span>
+                      <span class="metric-value">{{ selectedNode.metrics.push_row_num }}</span>
                     </div>
-                    <div v-if="selectedNode.metrics.pull_chunk_num" class="metric">
+                    <div v-if="hasMetric(selectedNode.metrics, 'pull_chunk_num')" class="metric">
                       <span class="metric-label">拉取数据块</span>
-                      <span class="metric-value">{{
-                        selectedNode.metrics.pull_chunk_num || "N/A"
-                      }}</span>
+                      <span class="metric-value">{{ selectedNode.metrics.pull_chunk_num }}</span>
                     </div>
-                    <div v-if="selectedNode.metrics.pull_row_num" class="metric">
+                    <div v-if="hasMetric(selectedNode.metrics, 'pull_row_num')" class="metric">
                       <span class="metric-label">拉取行数</span>
-                      <span class="metric-value">{{
-                        selectedNode.metrics.pull_row_num || "N/A"
-                      }}</span>
+                      <span class="metric-value">{{ selectedNode.metrics.pull_row_num }}</span>
                     </div>
                   </div>
                 </div>
@@ -378,9 +396,12 @@
                 <div v-if="hasSpecializedMetrics(selectedNode)" class="metrics-section" style="margin-top: 20px">
                   <h5>{{ selectedNode.operator_name }} 专用指标</h5>
                   <div class="specialized-metrics">
-                    <!-- 动态渲染所有专用指标 -->
+                    <!-- 动态渲染所有专用指标，过滤N/A值 -->
                     <template v-for="(specObj, specKey) in getValidSpecializedMetrics(selectedNode)" :key="specKey">
-                      <div v-for="(value, key) in specObj" :key="`${specKey}-${key}`" class="metric-item">
+                      <div v-for="(value, key) in specObj" 
+                           :key="`${specKey}-${key}`" 
+                           v-show="value !== null && value !== undefined && !isMetricNA(value)"
+                           class="metric-item">
                         <span class="label">{{ formatMetricKey(key) }}:</span>
                         <span class="value">{{ formatMetricValue(value) }}</span>
                       </div>
@@ -434,8 +455,11 @@ export default {
 
   data() {
     return {
-      NODE_WIDTH: 140,
-      NODE_HEIGHT: 60,
+      NODE_WIDTH: 180,
+      NODE_HEIGHT: 81, // 更新为新高度：28(头部) + 47(主体) + 6(进度条)
+      NODE_HEADER_HEIGHT: 28,
+      NODE_BODY_HEIGHT: 47,
+      NODE_PROGRESS_HEIGHT: 6,
       
       nodes: [],
       links: [],
@@ -456,7 +480,8 @@ export default {
       
       maxTime: 0,
       totalTimeMs: 0,
-      activeTab: "overview", // Default to overview tab
+      activeTab: "overview",
+      topTab: "time", // Default to overview tab
     };
   },
 
@@ -531,6 +556,41 @@ export default {
     window.removeEventListener("resize", this.onWindowResize);
   },
 
+  computed: {
+    topTimeNodes() {
+      if (!this.executionTree || !this.executionTree.nodes) return [];
+      
+      return [...this.executionTree.nodes]
+        .filter(n => n.time_percentage != null)
+        .sort((a, b) => (b.time_percentage || 0) - (a.time_percentage || 0))
+        .slice(0, 10);
+    },
+    
+    ioPercent() {
+      if (!this.summary) return 0;
+      const ioTime = this.summary.io_time_ms || 0;
+      const totalTime = this.summary.query_execution_wall_time_ms || 1;
+      return (ioTime / totalTime) * 100;
+    },
+    
+    processingPercent() {
+      if (!this.summary) return 0;
+      const processingTime = this.summary.processing_time_ms || 0;
+      const totalTime = this.summary.query_execution_wall_time_ms || 1;
+      return (processingTime / totalTime) * 100;
+    },
+
+    ioTime() {
+      if (!this.summary) return '0ms';
+      return this.formatDuration(this.summary.io_time_ms);
+    },
+
+    processingTime() {
+      if (!this.summary) return '0ms';
+      return this.formatDuration(this.summary.processing_time_ms);
+    }
+  },
+
   methods: {
     renderDAG() {
       if (
@@ -582,8 +642,8 @@ export default {
       }
 
       // 计算节点位置 - 垂直布局（从上到下）
-      const levelHeight = 150; // 垂直间距
-      const levelWidth = 200; // 水平间距
+      const levelHeight = 180; // 垂直间距
+      const levelWidth = 250; // 水平间距
       
       // 计算最大深度以确定SVG高度
       let maxDepth = 0;
@@ -601,7 +661,7 @@ export default {
         const nodesCountInLevel = levelNodes.length;
         
         // 垂直布局：y根据depth增加，x根据同深度内的位置计算（水平居中）
-        const y = depth * levelHeight + 50;
+        const y = depth * levelHeight + 80;
         const totalWidth = (nodesCountInLevel - 1) * levelWidth;
         const centerX = this.svgWidth / 2;
         const x = centerX - totalWidth / 2 + indexInLevel * levelWidth;
@@ -610,6 +670,7 @@ export default {
           ...node,
           x,
           y,
+          is_scan: node.operator_name && node.operator_name.includes('SCAN'),
         };
       });
 
@@ -617,32 +678,41 @@ export default {
       this.links = [];
       this.executionTree.nodes.forEach((sourceNode) => {
         if (!sourceNode || !sourceNode.children) return;
-        sourceNode.children.forEach((childId) => {
+        sourceNode.children.forEach((childId, childIndex) => {
           const targetNode = nodeMap.get(childId);
           if (targetNode && targetNode.metrics) {
             const source = this.nodes.find((n) => n.id === sourceNode.id);
             const target = this.nodes.find((n) => n.id === targetNode.id);
             
             if (source && target && source.metrics && target.metrics) {
-              // 箭头从child指向parent（从下往上）
+              // Arrow from child top (SCAN顶部) to parent bottom (TABLE_FUNCTION底部)
               const startX = target.x + this.NODE_WIDTH / 2;
-              const startY = target.y + this.NODE_HEIGHT; // From bottom of child
+              const startY = target.y;                            // From TOP of child (子节点顶部)
               const endX = source.x + this.NODE_WIDTH / 2;
-              const endY = source.y; // To top of parent
+              const endY = source.y + this.NODE_HEIGHT + 8;       // To BOTTOM of parent (父节点底部，留8px间隙)
 
               const controlY = (startY + endY) / 2;
               const path = `M ${startX} ${startY} C ${startX} ${controlY}, ${endX} ${controlY}, ${endX} ${endY}`;
 
               // 显示行数在箭头中点
               const rows = this.getNodeRows(targetNode);
+              let label = `Rows: ${this.formatRowsSimple(rows)}`;
+              
+              // 如果父节点是JOIN类型，添加PROBE/BUILD标记
+              if (sourceNode.operator_name && sourceNode.operator_name.includes('JOIN')) {
+                // 第一个子节点通常是PROBE侧，第二个是BUILD侧
+                label += childIndex === 0 ? ' (PROBE)' : ' (BUILD)';
+              }
               
               this.links.push({
                 id: `${source.id}-${target.id}`,
                 path,
                 labelX: (startX + endX) / 2,
                 labelY: controlY - 8,
-                label: this.formatRows(rows),
+                label: label,
                 isHotspot: source.is_hotspot || target.is_hotspot,
+                rowCount: rows, // Store row count for dynamic stroke width
+                strokeWidth: this.calculateStrokeWidth(rows),
               });
             }
           }
@@ -782,6 +852,20 @@ export default {
       }
     },
 
+    // Format rows for connection labels (without prefix)
+    formatRowsSimple(rows) {
+      if (!rows || rows === 0) return "0";
+      
+      // Format large numbers with commas
+      if (rows >= 1000000) {
+        return rows.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      } else if (rows >= 1000) {
+        return rows.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      } else {
+        return rows.toString();
+      }
+    },
+
     // 获取节点的有意义的行数（优先使用 push_row_num，否则使用 pull_row_num）
     getNodeRows(node) {
       if (!node || !node.metrics) return 0;
@@ -794,6 +878,20 @@ export default {
         return node.metrics.pull_row_num;
       }
       return 0;
+    },
+
+    // 根据行数计算箭头粗细（行数越多越粗，范围1-2.5px）
+    calculateStrokeWidth(rows) {
+      if (!rows || rows === 0) return 1;
+      
+      // 使用对数缩放，范围从1到2.5，保持精致纤细
+      const minWidth = 1;
+      const maxWidth = 2.5;
+      const log10 = Math.log10(rows);
+      const normalized = Math.min(log10 / 8, 1); // 假设最大行数约为10^8
+      const width = minWidth + (maxWidth - minWidth) * normalized;
+      
+      return Math.max(minWidth, Math.min(maxWidth, width));
     },
 
     getPercentage(node) {
@@ -1075,6 +1173,129 @@ export default {
         return JSON.stringify(value, null, 2);
       }
       return String(value);
+    },
+
+    // Check if a metric exists and is not null/undefined
+    hasMetric(metrics, key) {
+      if (!metrics) return false;
+      const value = metrics[key];
+      return value !== null && value !== undefined;
+    },
+
+    // Check if there are any metrics to show
+    hasMetricsToShow(node) {
+      if (!node || !node.metrics) return false;
+      return this.hasMetric(node.metrics, 'push_chunk_num') ||
+             this.hasMetric(node.metrics, 'push_row_num') ||
+             this.hasMetric(node.metrics, 'pull_chunk_num') ||
+             this.hasMetric(node.metrics, 'pull_row_num');
+    },
+
+    // Check if metric value is N/A
+    isMetricNA(value) {
+      if (value === null || value === undefined) return true;
+      const formatted = this.formatMetricValue(value);
+      return formatted === 'N/A' || formatted === 'N/A';
+    },
+
+    // Get node color class based on percentage
+    getNodeColorClass(node) {
+      const percentage = parseFloat(this.getPercentage(node));
+      if (percentage > 30) return 'red';
+      if (percentage >= 15) return 'orange';
+      return 'normal';
+    },
+
+    // Get progress bar width
+    getProgressWidth(node) {
+      const percentage = parseFloat(this.getPercentage(node));
+      const width = (percentage / 100) * this.NODE_WIDTH;
+      return Math.max(0, Math.min(width, this.NODE_WIDTH));
+    },
+
+    // Get progress bar color
+    getProgressColor(node) {
+      const percentage = parseFloat(this.getPercentage(node));
+      if (percentage > 30) return '#E57373';
+      if (percentage >= 15) return '#FFB74D';
+      return '#4CAF50';
+    },
+
+    // Get node border color based on performance
+    getNodeBorderColor(node) {
+      const percentage = parseFloat(this.getPercentage(node));
+      if (percentage > 30) return '#EF5350';
+      if (percentage >= 15) return '#BA68C8';
+      return '#E0E0E0';
+    },
+
+    // Get node border width based on performance
+    getNodeBorderWidth(node) {
+      const percentage = parseFloat(this.getPercentage(node));
+      if (percentage > 30) return 2;
+      if (percentage >= 15) return 2;
+      return 1;
+    },
+
+    // Check if node is in top 3 time-consuming nodes
+    isTopTimeNode(node) {
+      if (!this.topTimeNodes || this.topTimeNodes.length === 0) return false;
+      const top3 = this.topTimeNodes.slice(0, 3);
+      return top3.some(n => n.id === node.id);
+    },
+
+    // Download DAG as image
+    downloadAsImage() {
+      const svgElement = this.$refs.dagSvg;
+      if (!svgElement) return;
+      
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'dag-execution-tree.png';
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      };
+      
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    },
+
+    // Copy to clipboard
+    async copyToClipboard() {
+      const svgElement = this.$refs.dagSvg;
+      if (!svgElement) return;
+      
+      try {
+        const svgData = new XMLSerializer().serializeToString(svgElement);
+        const blob = new Blob([svgData], { type: 'image/svg+xml' });
+        
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/svg+xml': blob })
+        ]);
+        
+        console.log('已复制到剪贴板');
+      } catch (err) {
+        console.error('复制失败:', err);
+        // Fallback: copy as text
+        try {
+          const svgData = new XMLSerializer().serializeToString(svgElement);
+          await navigator.clipboard.writeText(svgData);
+          console.log('已复制SVG代码到剪贴板');
+        } catch (e) {
+          console.error('复制失败:', e);
+        }
+      }
     }
   },
 };
@@ -1086,26 +1307,6 @@ export default {
   flex-direction: column;
   height: 100%;
   background: #fafafa;
-}
-
-.dag-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: white;
-  border-bottom: 1px solid #e8e8e8;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.toolbar-left {
-  display: flex;
-  gap: 8px;
-}
-
-.zoom-level {
-  font-size: 12px;
-  color: #999;
 }
 
 .dag-main {
@@ -1120,6 +1321,44 @@ export default {
   border-right: 1px solid #e8e8e8;
   overflow: hidden;
   position: relative;
+}
+
+/* 右上角工具栏 */
+.dag-toolbar-right {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+  background: white;
+  padding: 6px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.toolbar-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  font-size: 14px;
+  color: #666;
+}
+
+.toolbar-icon-btn:hover {
+  background: #e8e8e8;
+  color: #333;
+}
+
+.toolbar-icon-btn:active {
+  background: #d8d8d8;
 }
 
 .dag-svg {
@@ -1137,29 +1376,28 @@ export default {
   pointer-events: all;
 }
 
-/* 连接线 */
+/* 连接线（精致纤细风格） */
 .connection-line {
-  stroke: #bfbfbf;
-  stroke-width: 1.5;
+  stroke: #BDBDBD;
   fill: none;
   stroke-linecap: round;
   transition: stroke 0.2s;
 }
 
 .connection-line:hover {
-  stroke: #595959;
-  stroke-width: 2;
+  stroke: #9E9E9E;
 }
 
 .connection-hotspot {
-  stroke: #ff6b6b !important;
+  stroke: #E57373 !important;
 }
 
 .row-count-label {
   font-size: 11px;
-  fill: #666;
+  fill: #757575;
   pointer-events: none;
   text-anchor: middle;
+  font-weight: 400;
 }
 
 /* 节点 */
@@ -1168,89 +1406,97 @@ export default {
   transition: all 0.2s;
 }
 
-.node-group:hover .node-rect {
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+.node-group:hover .node-header,
+.node-group:hover .node-body {
+  filter: drop-shadow(0 0 12px rgba(33, 150, 243, 0.5));
 }
 
-.node-group.selected .node-rect {
+.node-group.selected .node-header,
+.node-group.selected .node-body {
+  filter: drop-shadow(0 2px 8px rgba(24, 144, 255, 0.3));
+}
+
+.node-group.selected .node-body {
   stroke: #1890ff !important;
-  stroke-width: 2 !important;
-  filter: drop-shadow(0 2px 8px rgba(24, 144, 255, 0.2));
+  stroke-width: 1.5 !important;
 }
 
-.node-rect {
-  fill: #f5f5f5;
-  stroke: #d9d9d9;
-  stroke-width: 1;
+/* 节点头部样式 */
+.node-header {
+  fill: #CFD8DC;
+  stroke: none;
   transition: all 0.2s;
 }
 
-.node-hotspot {
-  fill: #ffe7e6 !important;
-  stroke: #ff6b6b !important;
-  stroke-width: 2 !important;
+.node-header-normal {
+  fill: #CFD8DC;
 }
 
-.hotspot-badge {
-  fill: #ff6b6b;
-  animation: pulse-hot 1.5s infinite;
+.node-header-orange {
+  fill: #E1BEE7;
 }
 
-@keyframes pulse-hot {
-  0%,
-  100% {
-    opacity: 1;
-    r: 4;
-  }
-  50% {
-    opacity: 0.6;
-    r: 5;
-  }
+.node-header-red {
+  fill: #FFCDD2;
 }
 
-.node-title {
-  font-size: 12px;
+/* 节点主体样式 */
+.node-body {
+  fill: #FFFFFF;
+  stroke: #E0E0E0;
+  stroke-width: 1px;
+  transition: all 0.2s;
+}
+
+.node-body-normal {
+  fill: #FFFFFF;
+  stroke: #E0E0E0;
+}
+
+.node-body-orange {
+  fill: #F3E5F5;
+  stroke: #E0E0E0;
+  stroke-width: 1px;
+}
+
+.node-body-red {
+  fill: #FFEBEE;
+  stroke: #E0E0E0;
+  stroke-width: 1px;
+}
+
+/* 进度条 */
+.progress-bg {
+  fill: #E0E0E0;
+}
+
+.progress-fill {
+  transition: width 0.3s ease;
+}
+
+/* 文字样式 */
+.node-title-header {
+  fill: #424242;
   font-weight: 600;
-  fill: #333;
+  font-size: 14px;
   pointer-events: none;
+  user-select: none;
 }
 
-.node-info {
+.node-info-detail {
+  fill: #666666;
   font-size: 10px;
-  fill: #666;
+  font-weight: 400;
   pointer-events: none;
+  user-select: none;
 }
 
-.node-percentage {
+.node-percentage-value {
+  fill: #333333;
   font-size: 13px;
-  font-weight: bold;
-  fill: #f5222d;
-  pointer-events: none;
-  text-anchor: end;
-}
-
-/* 时间消耗高亮样式（对齐StarRocks官方逻辑） */
-.node-most-consuming {
-  fill: #ffebee !important;
-  stroke: #f5222d !important;
-  stroke-width: 3px !important;
-}
-
-.node-second-consuming {
-  fill: #fff5f5 !important;
-  stroke: #fa8c16 !important;
-  stroke-width: 2px !important;
-}
-
-/* 百分比文字颜色 */
-.node-most-consuming + g .node-percentage {
-  fill: #f5222d;
-  font-weight: 900;
-}
-
-.node-second-consuming + g .node-percentage {
-  fill: #fa8c16;
   font-weight: 700;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* 右侧详情面板 */
@@ -1630,5 +1876,184 @@ export default {
 .info-value {
   font-weight: 600;
   color: #333;
+}
+/* Top 10 Panel Styles */
+.top-panel {
+  padding: 16px;
+}
+
+.top-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #fafafa;
+  font-weight: 600;
+  font-size: 12px;
+  color: #666;
+}
+
+.top-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.top-item:hover {
+  background: #fafafa;
+}
+
+.top-item.highlight-red {
+  background: #fff1f0;
+  border-left: 3px solid #f5222d;
+}
+
+.top-item.highlight-orange {
+  background: #fff7e6;
+  border-left: 3px solid #fa8c16;
+}
+
+.node-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.node-time {
+  color: #666;
+  font-weight: 600;
+}
+
+.overview-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.overview-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.progress-bar {
+  height: 24px;
+  display: flex;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f0f0f0;
+  margin: 8px 0;
+}
+
+.progress-segment {
+  transition: width 0.3s;
+}
+
+.progress-segment.io {
+  background: linear-gradient(90deg, #1890ff, #40a9ff);
+}
+
+.progress-segment.processing {
+  background: linear-gradient(90deg, #52c41a, #73d13d);
+}
+
+.metric-details {
+  margin-top: 8px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot.io-dot {
+  background: #1890ff;
+}
+
+.dot.processing-dot {
+  background: #52c41a;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.metric-row span:first-child {
+  color: #666;
+}
+
+.metric-row span:last-child {
+  font-weight: 600;
+  color: #333;
+}
+
+.suggestions-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.suggestions-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.suggestion-box {
+  border: 2px solid #fa8c16;
+  border-radius: 4px;
+  padding: 12px;
+  background: #fffbf0;
+  margin-top: 8px;
+}
+
+.suggestion-title {
+  font-weight: 600;
+  color: #d46b08;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.suggestion-title a {
+  color: #1890ff;
+  text-decoration: none;
+  margin-left: 8px;
+  font-weight: normal;
+}
+
+.suggestion-title a:hover {
+  text-decoration: underline;
+}
+
+.suggestion-content {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.6;
 }
 </style>

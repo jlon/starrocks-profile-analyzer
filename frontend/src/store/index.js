@@ -41,7 +41,7 @@ export default createStore({
         
         if (typeof profileText === 'string') {
           // 文本输入，使用JSON API
-          apiUrl = "http://localhost:3030/analyze";
+          apiUrl = "/api/analyze";
           requestOptions = {
             method: "POST",
             headers: {
@@ -53,7 +53,7 @@ export default createStore({
           console.log("📝 Profile文本长度:", profileText.length, "字符");
         } else {
           // 文件上传，使用multipart API
-          apiUrl = "http://localhost:3030/analyze-file";
+          apiUrl = "/api/analyze-file";
           const formData = new FormData();
           formData.append('file', profileText);
           requestOptions = {

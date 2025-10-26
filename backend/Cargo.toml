@@ -3,14 +3,6 @@ name = "starrocks-profile-analyzer"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "validate_all_profiles"
-path = "validate_all_profiles.rs"
-
-[[bin]]
-name = "validate_detailed"
-path = "validate_detailed.rs"
-
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -27,4 +19,7 @@ regex = { workspace = true }
 once_cell = { workspace = true }
 bytes = { workspace = true }
 thiserror = { workspace = true }
+rust-embed = "8.0"
+mime_guess = "2.0"
+clap = { version = "4.4", features = ["derive"] }
 

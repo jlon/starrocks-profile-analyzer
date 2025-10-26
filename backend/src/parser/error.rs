@@ -1,8 +1,7 @@
-//! # ParseError - 解析器错误类型定义
 
 use thiserror::Error;
 
-/// 解析器错误类型
+
 #[derive(Debug, Error)]
 pub enum ParseError {
     #[error("Invalid profile format: {0}")]
@@ -51,6 +50,6 @@ pub enum ParseError {
     InternalError(String),
 }
 
-/// 解析器结果类型别名
+
 pub type ParseResult<T> = Result<T, ParseError>;
 
