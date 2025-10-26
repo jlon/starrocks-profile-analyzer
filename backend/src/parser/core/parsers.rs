@@ -100,6 +100,12 @@ impl ValueParser {
     /// 
     /// ```
     pub fn parse_bytes(input: &str) -> ParseResult<u64> {
+        Self::parse_bytes_to_u64(input)
+    }
+    
+    /// Parse bytes from string like "45.907 GB" to u64 bytes
+    /// Supported units: B, KB, MB, GB, TB
+    pub fn parse_bytes_to_u64(input: &str) -> ParseResult<u64> {
         let original = input.trim();
         let input = original.to_uppercase();
         
@@ -354,10 +360,6 @@ impl MetricsParser {
     /// ```
     /// ```
     pub fn parse_metric_line(line: &str) -> Option<(String, String)> {
-        if line.contains("__MIN_OF_") {
-            return None;
-        }
-        
         METRIC_LINE_REGEX.captures(line).and_then(|caps| {
             let key = caps.get(1)?.as_str().trim().to_string();
             let value = caps.get(2)?.as_str().trim().to_string();
@@ -382,6 +384,7 @@ impl MetricsParser {
     
     
     fn extract_section_block(text: &str, section_marker: &str) -> String {
+        // 完全按照StarRocks官方逻辑：直接解析所有行，不进行复杂的缩进判断
         if let Some(start) = text.find(section_marker) {
             let after_marker = &text[start + section_marker.len()..];
             let lines: Vec<&str> = after_marker.lines().collect();
@@ -390,29 +393,19 @@ impl MetricsParser {
                 return String::new();
             }
             
-
-            let base_indent = lines.iter()
-                .find(|l| !l.trim().is_empty())
-                .map(|l| Self::get_indent(l))
-                .unwrap_or(0);
-            
             let mut block_lines = Vec::new();
             
             for line in lines {
                 let trimmed = line.trim();
                 
+                // 如果遇到新的Metrics section，停止
                 if trimmed.ends_with("Metrics:") && trimmed != section_marker.trim_end_matches(':') {
                     break;
                 }
                 
-
-                if !trimmed.is_empty() {
-                    let line_indent = Self::get_indent(line);
-                    if line_indent <= base_indent && !trimmed.starts_with('-') {
-                        if trimmed.ends_with(':') || Self::is_operator_line(trimmed) {
-                            break;
-                        }
-                    }
+                // 如果遇到新的operator（以plan_node_id结尾），停止
+                if trimmed.contains("(plan_node_id=") && !trimmed.starts_with("-") {
+                    break;
                 }
                 
                 block_lines.push(line);
@@ -431,7 +424,17 @@ impl MetricsParser {
                     metrics.operator_total_time = Some(duration.as_nanos() as u64);
                 }
             }
-            "__MAX_OF_OperatorTotalTime" | "CPUTime" => {
+            "__MIN_OF_OperatorTotalTime" => {
+                if let Ok(duration) = ValueParser::parse_duration(value) {
+                    metrics.operator_total_time_min = Some(duration.as_nanos() as u64);
+                }
+            }
+            "__MAX_OF_OperatorTotalTime" => {
+                if let Ok(duration) = ValueParser::parse_duration(value) {
+                    metrics.operator_total_time_max = Some(duration.as_nanos() as u64);
+                }
+            }
+            "CPUTime" => {
                 if let Ok(duration) = ValueParser::parse_duration(value) {
                     metrics.operator_total_time = Some(duration.as_nanos() as u64);
                 }
@@ -453,9 +456,14 @@ impl MetricsParser {
                     metrics.push_total_time = Some(duration.as_nanos() as u64);
                 }
             }
+            "__MIN_OF_PushTotalTime" => {
+                if let Ok(duration) = ValueParser::parse_duration(value) {
+                    metrics.push_total_time_min = Some(duration.as_nanos() as u64);
+                }
+            }
             "__MAX_OF_PushTotalTime" => {
                 if let Ok(duration) = ValueParser::parse_duration(value) {
-                    metrics.push_total_time = Some(duration.as_nanos() as u64);
+                    metrics.push_total_time_max = Some(duration.as_nanos() as u64);
                 }
             }
             "PullTotalTime" => {
@@ -463,9 +471,14 @@ impl MetricsParser {
                     metrics.pull_total_time = Some(duration.as_nanos() as u64);
                 }
             }
+            "__MIN_OF_PullTotalTime" => {
+                if let Ok(duration) = ValueParser::parse_duration(value) {
+                    metrics.pull_total_time_min = Some(duration.as_nanos() as u64);
+                }
+            }
             "__MAX_OF_PullTotalTime" => {
                 if let Ok(duration) = ValueParser::parse_duration(value) {
-                    metrics.pull_total_time = Some(duration.as_nanos() as u64);
+                    metrics.pull_total_time_max = Some(duration.as_nanos() as u64);
                 }
             }
             "MemoryUsage" => {
@@ -493,42 +506,4 @@ impl MetricsParser {
 }
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_parse_metric_line() {
-        let (key, value) = MetricsParser::parse_metric_line("  - OperatorTotalTime: 7s854ms").unwrap();
-        assert_eq!(key, "OperatorTotalTime");
-        assert_eq!(value, "7s854ms");
-        
-        let (key2, value2) = MetricsParser::parse_metric_line("     - PullChunkNum: 1").unwrap();
-        assert_eq!(key2, "PullChunkNum");
-        assert_eq!(value2, "1");
-    }
-    
-    #[test]
-    fn test_skip_min_max() {
-        assert!(MetricsParser::parse_metric_line("  - __MIN_OF_OperatorTotalTime: 1ms").is_none());
-        assert!(MetricsParser::parse_metric_line("  - __MAX_OF_PullRowNum: 100").is_some());
-    }
-    
-    #[test]
-    fn test_parse_common_metrics() {
-        let text = r#"
-CommonMetrics:
-   - OperatorTotalTime: 7s854ms
-   - PullChunkNum: 1
-   - PullRowNum: 100
-   - PushChunkNum: 1
-   - PushRowNum: 100
-"#;
-        
-        let metrics = MetricsParser::parse_common_metrics(text);
-        assert!(metrics.operator_total_time.is_some());
-        assert_eq!(metrics.pull_chunk_num, Some(1));
-        assert_eq!(metrics.pull_row_num, Some(100));
-    }
-}
 

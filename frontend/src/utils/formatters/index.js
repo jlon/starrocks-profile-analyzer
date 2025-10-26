@@ -2,8 +2,8 @@
  * Formatters 统一导出
  */
 
-export * from './durationFormatter';
-export * from './bytesFormatter';
+export * from "./durationFormatter";
+export * from "./bytesFormatter";
 
 /**
  * 格式化数字（添加千位分隔符）
@@ -11,16 +11,16 @@ export * from './bytesFormatter';
  * @returns {string} 格式化后的字符串
  */
 export function formatNumber(num) {
-  if (num === null || num === undefined || num === '') {
-    return 'N/A';
+  if (num === null || num === undefined || num === "") {
+    return "N/A";
   }
-  
-  const numValue = typeof num === 'string' ? parseFloat(num) : num;
-  
+
+  const numValue = typeof num === "string" ? parseFloat(num) : num;
+
   if (isNaN(numValue)) {
-    return 'N/A';
+    return "N/A";
   }
-  
+
   return numValue.toLocaleString();
 }
 
@@ -32,17 +32,16 @@ export function formatNumber(num) {
  * @returns {string} 格式化后的字符串
  */
 export function formatPercentage(value, isDecimal = true, decimals = 2) {
-  if (value === null || value === undefined || value === '') {
-    return 'N/A';
+  if (value === null || value === undefined || value === "") {
+    return "N/A";
   }
-  
-  const numValue = typeof value === 'string' ? parseFloat(value) : value;
-  
+
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
+
   if (isNaN(numValue)) {
-    return 'N/A';
+    return "N/A";
   }
-  
+
   const percent = isDecimal ? numValue * 100 : numValue;
   return `${percent.toFixed(decimals)}%`;
 }
-

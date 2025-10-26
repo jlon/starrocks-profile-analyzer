@@ -5,33 +5,40 @@
 
 // API 端点
 export const API_ENDPOINTS = {
-  UPLOAD_PROFILE: '/api/upload',
-  ANALYZE_PROFILE: '/api/analyze',
+  UPLOAD_PROFILE: "/api/upload",
+  ANALYZE_PROFILE: "/api/analyze",
 };
 
 // Severity 颜色配置
 export const SEVERITY_COLORS = {
-  Severe: '#fa541a',
-  High: '#722ed1',
-  Moderate: '#fa8c16',
-  Mild: '#faad14',
-  Normal: '#52c41a',
+  Severe: "#fa541a",
+  High: "#722ed1",
+  Moderate: "#fa8c16",
+  Mild: "#faad14",
+  Normal: "#52c41a",
 };
 
 // Severity 标签配置（中文）
 export const SEVERITY_LABELS = {
-  Severe: '严重',
-  High: '高',
-  Moderate: '中等',
-  Mild: '轻微',
-  Normal: '正常',
+  Severe: "严重",
+  High: "高",
+  Moderate: "中等",
+  Mild: "轻微",
+  Normal: "正常",
 };
 
 // 默认配置
 export const DEFAULT_CONFIG = {
   MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
-  SUPPORTED_FILE_TYPES: ['.txt', '.log'],
-  CHART_COLORS: ['#1890ff', '#13c2c2', '#722ed1', '#52c41a', '#fa8c16', '#fa541c'],
+  SUPPORTED_FILE_TYPES: [".txt", ".log"],
+  CHART_COLORS: [
+    "#1890ff",
+    "#13c2c2",
+    "#722ed1",
+    "#52c41a",
+    "#fa8c16",
+    "#fa541c",
+  ],
 };
 
 /**
@@ -40,7 +47,7 @@ export const DEFAULT_CONFIG = {
  * @returns {string} 颜色值
  */
 export function getSeverityColor(severity) {
-  return SEVERITY_COLORS[severity] || '#1890ff';
+  return SEVERITY_COLORS[severity] || "#1890ff";
 }
 
 /**
@@ -51,4 +58,3 @@ export function getSeverityColor(severity) {
 export function getSeverityLabel(severity) {
   return SEVERITY_LABELS[severity] || severity;
 }
-

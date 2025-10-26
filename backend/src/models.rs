@@ -46,6 +46,42 @@ pub struct ProfileSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub query_execution_wall_time_ms: Option<f64>,
     
+    // === Execution Time Metrics ===
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_cumulative_cpu_time: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_cumulative_cpu_time_ms: Option<f64>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_cumulative_scan_time: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_cumulative_scan_time_ms: Option<f64>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_cumulative_network_time: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_cumulative_network_time_ms: Option<f64>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_peak_schedule_time: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_peak_schedule_time_ms: Option<f64>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result_deliver_time: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result_deliver_time_ms: Option<f64>,
+    
+    // === Memory Metrics ===
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_sum_memory_usage: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_deallocated_memory_usage: Option<String>,
+    
+    // === Spill Metrics ===
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_spill_bytes: Option<String>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     pub top_time_consuming_nodes: Option<Vec<TopNode>>,
 }
@@ -118,6 +154,10 @@ pub struct ExecutionTreeNode {
     
     #[serde(default)]
     pub is_second_most_consuming: bool,
+    
+    // 添加unique_metrics字段，直接传递原始数据
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub unique_metrics: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -143,6 +183,13 @@ pub struct OperatorMetrics {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operator_total_time_raw: Option<String>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operator_total_time_min: Option<u64>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operator_total_time_max: Option<u64>,
+    
     pub push_chunk_num: Option<u64>,
     pub push_row_num: Option<u64>,
     pub pull_chunk_num: Option<u64>,
@@ -150,7 +197,15 @@ pub struct OperatorMetrics {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub push_total_time: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub push_total_time_min: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub push_total_time_max: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pull_total_time: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pull_total_time_min: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pull_total_time_max: Option<u64>,
 
 
     pub memory_usage: Option<u64>,
@@ -167,12 +222,18 @@ impl Default for OperatorMetrics {
         Self {
             operator_total_time: None,
             operator_total_time_raw: None,
+            operator_total_time_min: None,
+            operator_total_time_max: None,
             push_chunk_num: None,
             push_row_num: None,
             pull_chunk_num: None,
             pull_row_num: None,
             push_total_time: None,
+            push_total_time_min: None,
+            push_total_time_max: None,
             pull_total_time: None,
+            pull_total_time_min: None,
+            pull_total_time_max: None,
             memory_usage: None,
             output_chunk_bytes: None,
             specialized: OperatorSpecializedMetrics::None,

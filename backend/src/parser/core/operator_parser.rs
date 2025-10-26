@@ -126,7 +126,7 @@ impl OperatorParser {
 
             "COLLECT_STATS_SOURCE" | "COLLECT_STATS_SINK" => "COLLECT_STATS".to_string(),
 
-            "AGG" | "AGGREGATION" | "AGGREGATE" => "AGGREGATE".to_string(),
+            "AGG" | "AGGREGATION" | "AGGREGATE" | "AGGREGATE_BLOCKING_SINK" | "AGGREGATE_BLOCKING_SOURCE" => "AGGREGATION".to_string(),
 
             "LOCAL_SORT" | "SORT" => "SORT".to_string(),
             "NL_JOIN" | "NEST_LOOP_JOIN" | "CROSS_JOIN" | "HASH_JOIN" => "HASH_JOIN".to_string(),
@@ -146,7 +146,7 @@ impl OperatorParser {
             "RESULT_SINK" => vec!["RESULT_SINK"],
             "HASH_JOIN" => vec!["HASH_JOIN", "NL_JOIN", "CROSS_JOIN"],
 
-            "AGGREGATE" | "AGGREGATION" => vec!["AGGREGATE", "AGGREGATION"],
+            "AGGREGATE" | "AGGREGATION" => vec!["AGGREGATE", "AGGREGATION", "AGGREGATE_BLOCKING_SINK", "AGGREGATE_BLOCKING_SOURCE"],
 
             "LIMIT" => vec!["LIMIT"],
             "SORT" => vec!["SORT", "LOCAL_SORT"],

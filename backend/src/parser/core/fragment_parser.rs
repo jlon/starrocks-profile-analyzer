@@ -215,9 +215,6 @@ impl FragmentParser {
             let trimmed = line.trim();
             if trimmed.starts_with("- ") {
                 let rest = trimmed.trim_start_matches("- ");
-                if rest.starts_with("__MIN_OF_") {
-                    continue;
-                }
                 
                 if let Some(colon_pos) = rest.find(": ") {
                     let key = rest[..colon_pos].trim().to_string();

@@ -47,6 +47,9 @@ impl ProfileComposer {
             }
         }
         
+        // Extract all execution metrics for overview diagnostics
+        Self::extract_execution_metrics(&execution_info, &mut summary);
+        
         let fragments = FragmentParser::extract_all_fragments(text);
 
         let topology_result = Self::extract_topology_json(&execution_info.topology)
@@ -55,9 +58,11 @@ impl ProfileComposer {
             }).ok();
         
         let execution_tree = if let Some(ref topology) = topology_result {
+            println!("DEBUG: Using topology-based node building");
             let nodes = self.build_nodes_from_topology_and_fragments(topology, &fragments)?;
             TreeBuilder::build_from_topology(topology, nodes, &fragments, &summary)?
         } else {
+            println!("DEBUG: Using fragment-based node building");
             let nodes = self.build_nodes_from_fragments(text, &fragments)?;
             TreeBuilder::build_from_fragments(nodes, &summary, &fragments)?
         };
@@ -134,6 +139,7 @@ impl ProfileComposer {
                 for operator in &pipeline.operators {
                     if let Some(plan_id) = &operator.plan_node_id {
                         if let Ok(plan_id_int) = plan_id.parse::<i32>() {
+                            println!("DEBUG: Found operator '{}' with plan_id={}", operator.name, plan_id_int);
                             operators_by_plan_id
                                 .entry(plan_id_int)
                                 .or_default()
@@ -143,10 +149,14 @@ impl ProfileComposer {
                 }
             }
         }
+        
+        println!("DEBUG: operators_by_plan_id keys: {:?}", operators_by_plan_id.keys().collect::<Vec<_>>());
  
         let mut nodes = Vec::new();
         for topo_node in &topology.nodes {
+            println!("DEBUG: Processing topology node: id={}, name={}", topo_node.id, topo_node.name);
             let tree_node = if let Some(op_list) = operators_by_plan_id.get(&topo_node.id) {
+                println!("DEBUG: Found {} operators for plan_id={}", op_list.len(), topo_node.id);
                 let op_refs: Vec<&crate::models::Operator> = op_list.iter().map(|(op,_,_)| *op).collect();
                 let aggregated_op = Self::aggregate_operators(&op_refs, &topo_node.name);
                 
@@ -161,12 +171,30 @@ impl ProfileComposer {
 
                 let mut metrics = MetricsParser::from_hashmap(&aggregated_op.common_metrics);
 
+                // Debug: Check if unique_metrics is empty
+                println!("DEBUG: aggregated_op.unique_metrics.len() = {}", aggregated_op.unique_metrics.len());
+                if !aggregated_op.unique_metrics.is_empty() {
+                    println!("DEBUG: unique_metrics keys: {:?}", aggregated_op.unique_metrics.keys().collect::<Vec<_>>());
+                }
+
+                // Parse specialized metrics using StarRocks official approach
                 if !aggregated_op.unique_metrics.is_empty() {
                     let specialized_parser = SpecializedMetricsParser::new();
-
                     let pure_name = Self::extract_operator_name(&aggregated_op.name);
-                    let unique_text = Self::build_unique_metrics_text(&aggregated_op.unique_metrics);
-                    metrics.specialized = specialized_parser.parse(&pure_name, &unique_text);
+                    
+                    // Build complete operator text including both common and unique metrics
+                    let mut operator_text = String::new();
+                    operator_text.push_str(&format!("{} (plan_node_id={}):\n", pure_name, topo_node.id));
+                    operator_text.push_str("  CommonMetrics:\n");
+                    for (key, value) in &aggregated_op.common_metrics {
+                        operator_text.push_str(&format!("     - {}: {}\n", key, value));
+                    }
+                    operator_text.push_str("  UniqueMetrics:\n");
+                    for (key, value) in &aggregated_op.unique_metrics {
+                        operator_text.push_str(&format!("     - {}: {}\n", key, value));
+                    }
+                    
+                    metrics.specialized = specialized_parser.parse(&pure_name, &operator_text);
                 }
 
                 ExecutionTreeNode {
@@ -185,6 +213,7 @@ impl ProfileComposer {
                     time_percentage: None,
                     is_most_consuming: false,
                     is_second_most_consuming: false,
+                    unique_metrics: aggregated_op.unique_metrics.clone(),
                 }
             } else {
                 ExecutionTreeNode {
@@ -203,6 +232,7 @@ impl ProfileComposer {
                     time_percentage: None,
                     is_most_consuming: false,
                     is_second_most_consuming: false,
+                    unique_metrics: HashMap::new(),
                 }
             };
 
@@ -243,13 +273,14 @@ impl ProfileComposer {
                                 depth: 0,
                                 metrics,
                                 is_hotspot: false,
-                            hotspot_severity: HotSeverity::Normal,
-                            fragment_id: Some(fragment.id.clone()),
-                            pipeline_id: Some(pipeline.id.clone()),
-                            time_percentage: None,
-                            is_most_consuming: false,
-                            is_second_most_consuming: false,
-                        };
+                                hotspot_severity: HotSeverity::Normal,
+                                fragment_id: Some(fragment.id.clone()),
+                                pipeline_id: Some(pipeline.id.clone()),
+                                time_percentage: None,
+                                is_most_consuming: false,
+                                is_second_most_consuming: false,
+                                unique_metrics: operator.unique_metrics.clone(),
+                            };
                             
                             sink_nodes.push(sink_node);
                             next_sink_id -= 1;
@@ -403,6 +434,31 @@ impl ProfileComposer {
             }
         }
 
+        // Aggregate unique_metrics from all matching operators
+        let mut aggregated_unique_metrics = HashMap::new();
+        println!("DEBUG: Aggregating unique_metrics from {} matching operators", matching_operators.len());
+        for &op in &matching_operators {
+            println!("DEBUG: Processing operator '{}' with {} unique_metrics", op.name, op.unique_metrics.len());
+            for (key, value) in &op.unique_metrics {
+                println!("DEBUG: Adding unique_metric: {} = {}", key, value);
+                
+                // For min/max metrics, we need to aggregate properly
+                if key.starts_with("__MIN_OF_") || key.starts_with("__MAX_OF_") {
+                    // For min/max metrics, keep the first occurrence (they should be the same across instances)
+                    if !aggregated_unique_metrics.contains_key(key) {
+                        aggregated_unique_metrics.insert(key.clone(), value.clone());
+                    }
+                } else {
+                    // For regular metrics, we need to aggregate all values, not just the first one
+                    // This is important for min/max values and other aggregated metrics
+                    aggregated_unique_metrics.insert(key.clone(), value.clone());
+                }
+            }
+        }
+        
+        // Merge unique_metrics into base_operator
+        base_operator.unique_metrics = aggregated_unique_metrics;
+
         base_operator
     }
 
@@ -540,6 +596,7 @@ impl ProfileComposer {
             time_percentage: None,
             is_most_consuming: false,
             is_second_most_consuming: false,
+            unique_metrics: HashMap::new(), // 这个方法中没有unique_metrics数据
         })
     }
     
@@ -587,6 +644,50 @@ impl ProfileComposer {
                 }
             })
             .collect()
+    }
+    
+    /// Extract all execution metrics for overview diagnostics
+    fn extract_execution_metrics(execution_info: &crate::models::ExecutionInfo, summary: &mut ProfileSummary) {
+        // Memory metrics
+        if let Some(val) = execution_info.metrics.get("QueryAllocatedMemoryUsage") {
+            summary.query_allocated_memory = ValueParser::parse_bytes_to_u64(val).ok();
+        }
+        if let Some(val) = execution_info.metrics.get("QueryPeakMemoryUsagePerNode") {
+            summary.query_peak_memory = ValueParser::parse_bytes_to_u64(val).ok();
+        }
+        if let Some(val) = execution_info.metrics.get("QuerySumMemoryUsage") {
+            summary.query_sum_memory_usage = Some(val.clone());
+        }
+        if let Some(val) = execution_info.metrics.get("QueryDeallocatedMemoryUsage") {
+            summary.query_deallocated_memory_usage = Some(val.clone());
+        }
+        
+        // Time metrics
+        if let Some(val) = execution_info.metrics.get("QueryCumulativeCpuTime") {
+            summary.query_cumulative_cpu_time = Some(val.clone());
+            summary.query_cumulative_cpu_time_ms = ValueParser::parse_time_to_ms(val).ok();
+        }
+        if let Some(val) = execution_info.metrics.get("QueryCumulativeScanTime") {
+            summary.query_cumulative_scan_time = Some(val.clone());
+            summary.query_cumulative_scan_time_ms = ValueParser::parse_time_to_ms(val).ok();
+        }
+        if let Some(val) = execution_info.metrics.get("QueryCumulativeNetworkTime") {
+            summary.query_cumulative_network_time = Some(val.clone());
+            summary.query_cumulative_network_time_ms = ValueParser::parse_time_to_ms(val).ok();
+        }
+        if let Some(val) = execution_info.metrics.get("QueryPeakScheduleTime") {
+            summary.query_peak_schedule_time = Some(val.clone());
+            summary.query_peak_schedule_time_ms = ValueParser::parse_time_to_ms(val).ok();
+        }
+        if let Some(val) = execution_info.metrics.get("ResultDeliverTime") {
+            summary.result_deliver_time = Some(val.clone());
+            summary.result_deliver_time_ms = ValueParser::parse_time_to_ms(val).ok();
+        }
+        
+        // Spill metrics
+        if let Some(val) = execution_info.metrics.get("QuerySpillBytes") {
+            summary.query_spill_bytes = Some(val.clone());
+        }
     }
 }
 

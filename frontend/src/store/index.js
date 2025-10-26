@@ -28,6 +28,12 @@ export default createStore({
     CLEAR_ERROR(state) {
       state.error = null;
     },
+
+    CLEAR_ANALYSIS_RESULT(state) {
+      state.analysisResult = null;
+      state.profileText = null;
+      state.error = null;
+    },
   },
 
   actions: {
@@ -38,8 +44,8 @@ export default createStore({
       try {
         // 判断是文本还是文件
         let apiUrl, requestOptions;
-        
-        if (typeof profileText === 'string') {
+
+        if (typeof profileText === "string") {
           // 文本输入，使用JSON API
           apiUrl = "/api/analyze";
           requestOptions = {
@@ -55,13 +61,19 @@ export default createStore({
           // 文件上传，使用multipart API
           apiUrl = "/api/analyze-file";
           const formData = new FormData();
-          formData.append('file', profileText);
+          formData.append("file", profileText);
           requestOptions = {
             method: "POST",
             body: formData,
           };
           console.log("📤 开始发送文件请求到:", apiUrl);
-          console.log("📁 文件名:", profileText.name, "大小:", profileText.size, "字节");
+          console.log(
+            "📁 文件名:",
+            profileText.name,
+            "大小:",
+            profileText.size,
+            "字节",
+          );
         }
 
         const response = await fetch(apiUrl, requestOptions);
@@ -79,6 +91,14 @@ export default createStore({
           commit("SET_ANALYSIS_RESULT", result.data);
           commit("SET_PROFILE_TEXT", profileText);
           console.log("✅ 分析完成！");
+          console.log(
+            "📊 节点数据示例:",
+            result.data.execution_tree?.nodes?.[0],
+          );
+          console.log(
+            "📊 unique_metrics示例:",
+            result.data.execution_tree?.nodes?.[0]?.unique_metrics,
+          );
         } else {
           const errorMsg = result.error || "分析失败，未知错误";
           console.error("❌ 分析返回错误:", errorMsg);

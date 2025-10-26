@@ -15,14 +15,17 @@ pub async fn start_server(host: String, port: u16) {
         .allow_headers(vec!["content-type"])
         .allow_methods(vec!["GET", "POST"]);
 
-    let analyze_profile_json = warp::path("analyze")
+    let analyze_profile_json = warp::path("api")
+        .and(warp::path("analyze"))
         .and(warp::post())
         .and(warp::body::content_length_limit(1024 * 1024 * 50))
         .and(warp::body::json())
         .and_then(handle_analyze_profile);
 
     use crate::constants::file_limits;
-    let analyze_profile_file = warp::path("analyze-file")
+
+    let analyze_profile_file_api = warp::path("api")
+        .and(warp::path("analyze-file"))
         .and(warp::post())
         .and(warp::body::content_length_limit(file_limits::MAX_UPLOAD_SIZE))
         .and(warp::multipart::form().max_length(file_limits::MAX_UPLOAD_SIZE))
@@ -34,7 +37,7 @@ pub async fn start_server(host: String, port: u16) {
 
     let api_routes = health
         .or(analyze_profile_json)
-        .or(analyze_profile_file);
+        .or(analyze_profile_file_api);
 
     let static_routes = warp::get()
         .and(warp::path::tail())
@@ -148,7 +151,9 @@ async fn serve_static(path: warp::path::Tail) -> Result<impl warp::Reply, warp::
             
             Ok(warp::http::Response::builder()
                 .header("content-type", mime.as_ref())
-                .header("cache-control", "public, max-age=86400")
+                .header("cache-control", "no-cache, no-store, must-revalidate")
+                .header("pragma", "no-cache")
+                .header("expires", "0")
                 .body(content.data.to_vec())
                 .unwrap())
         }

@@ -162,12 +162,8 @@ export default {
         return;
       }
 
-      try {
-        const text = await this.selectedFile.text();
-        this.$emit("file-uploaded", text);
-      } catch (error) {
-        this.$message.error("文件读取失败: " + error.message);
-      }
+      // 直接传递文件对象而不是文本内容
+      this.$emit("file-uploaded", this.selectedFile);
     },
 
     clearFile() {

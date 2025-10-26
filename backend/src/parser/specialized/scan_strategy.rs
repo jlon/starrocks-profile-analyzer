@@ -12,7 +12,16 @@ pub struct ScanStrategy;
 
 impl SpecializedMetricsStrategy for ScanStrategy {
     fn parse(&self, text: &str) -> OperatorSpecializedMetrics {
-        let is_connector_scan = text.contains("CONNECTOR_SCAN") || text.contains("DataSourceType");
+        println!("DEBUG: ScanStrategy.parse called with text length: {}", text.len());
+        println!("DEBUG: First 200 chars: {}", &text[..text.len().min(200)]);
+        
+        // Check for connector scan indicators in the metrics
+        let is_connector_scan = text.contains("CONNECTOR_SCAN") || 
+                               text.contains("DataSourceType") ||
+                               text.contains("AdaptiveIOTasks") ||
+                               text.contains("MorselQueueType") ||
+                               text.contains("MorselsCount");
+        println!("DEBUG: is_connector_scan: {}", is_connector_scan);
         
         if is_connector_scan {
             OperatorSpecializedMetrics::ConnectorScan(Self::parse_connector_scan(text))
@@ -58,10 +67,14 @@ impl ScanStrategy {
     }
     
     fn parse_connector_scan(text: &str) -> ConnectorScanSpecializedMetrics {
+        println!("DEBUG: parse_connector_scan called with text length: {}", text.len());
+        println!("DEBUG: First 500 chars: {}", &text[..text.len().min(500)]);
+        
         let mut data_source_type = String::new();
         let mut table = String::new();
         let mut rollup = String::new();
         let mut morsel_queue_type = String::new();
+        let mut shared_scan = false;
         let mut io_time: Option<Duration> = None;
         let mut io_task_exec_time: Option<Duration> = None;
         let mut scan_time: Option<Duration> = None;
@@ -100,11 +113,13 @@ impl ScanStrategy {
             }
             
             if let Some((key, value)) = Self::parse_kv_line(trimmed) {
+                println!("DEBUG: Parsed key='{}', value='{}'", key, value);
                 match key {
                     "DataSourceType" => data_source_type = value.to_string(),
                     "Table" => table = value.to_string(),
                     "Rollup" => rollup = value.to_string(),
                     "MorselQueueType" => morsel_queue_type = value.to_string(),
+                    "SharedScan" => shared_scan = value.to_lowercase() == "true",
                     "ScanTime" => scan_time = ValueParser::parse_duration(value).ok(),
                     "IOTime" => {
                         if in_io_task_exec {
@@ -142,7 +157,7 @@ impl ScanStrategy {
             data_source_type,
             table,
             rollup,
-            shared_scan: false,
+            shared_scan,
             morsel_queue_type,
             io_time,
             io_task_exec_time,
@@ -165,16 +180,27 @@ impl ScanStrategy {
     }
     
     fn parse_kv_line(line: &str) -> Option<(&str, &str)> {
-        if !line.starts_with('-') {
-            return None;
-        }
+        let trimmed = line.trim();
+        println!("DEBUG: parse_kv_line called with: '{}'", trimmed);
         
-        let rest = line.trim_start_matches('-').trim();
+        // Support both formats:
+        // 1. "- Key: Value" (original format)
+        // 2. "Key: Value" (our current format)
+        let rest = if trimmed.starts_with('-') {
+            trimmed.trim_start_matches('-').trim()
+        } else {
+            trimmed
+        };
+        
         let parts: Vec<&str> = rest.splitn(2, ':').collect();
+        println!("DEBUG: parts: {:?}", parts);
         
         if parts.len() == 2 {
-            Some((parts[0].trim(), parts[1].trim()))
+            let result = Some((parts[0].trim(), parts[1].trim()));
+            println!("DEBUG: parse_kv_line result: {:?}", result);
+            result
         } else {
+            println!("DEBUG: parse_kv_line failed - not enough parts");
             None
         }
     }

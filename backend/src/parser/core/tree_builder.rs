@@ -817,6 +817,7 @@ impl TreeBuilder {
 mod tests {
     use super::*;
     use crate::models::{NodeType, OperatorMetrics, HotSeverity};
+    use std::collections::HashMap;
     
     #[test]
     fn test_calculate_depths() {
@@ -837,6 +838,7 @@ mod tests {
                 time_percentage: None,
                 is_most_consuming: false,
                 is_second_most_consuming: false,
+                unique_metrics: HashMap::new(),
             },
             ExecutionTreeNode {
                 id: "node_1".to_string(),
@@ -854,6 +856,7 @@ mod tests {
                 time_percentage: None,
                 is_most_consuming: false,
                 is_second_most_consuming: false,
+                unique_metrics: HashMap::new(),
             },
         ];
         

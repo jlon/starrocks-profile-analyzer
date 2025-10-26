@@ -10,75 +10,62 @@
 
       <el-container class="content-container">
         <el-main class="main-content">
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-card shadow="hover" class="upload-section">
-                <template #header>
-                  <div class="card-header">
-                    <i class="fas fa-upload"></i>
-                    上传Profile文件
-                  </div>
-                </template>
+          <!-- 上传区域（分析前显示） -->
+          <div v-if="!isAnalyzing" class="upload-container">
+            <el-row :gutter="20">
+              <el-col :span="24">
+                <el-card shadow="hover" class="upload-section">
+                  <template #header>
+                    <div class="card-header">
+                      <i class="fas fa-upload"></i>
+                      上传Profile文件
+                    </div>
+                  </template>
 
-                <FileUploader
-                  @file-uploaded="handleFileUpload"
-                  :loading="loading"
-                />
-
-                <div v-if="error" class="error-message">
-                  <el-alert
-                    :title="error"
-                    type="error"
-                    show-icon
-                    :closable="false"
+                  <FileUploader
+                    @file-uploaded="handleFileUpload"
+                    :loading="loading"
                   />
-                </div>
-              </el-card>
-            </el-col>
 
-            <el-col :span="12" v-if="hasAnalysisResult">
-              <el-card shadow="hover" class="summary-section">
-                <template #header>
-                  <div class="card-header">
-                    <i class="fas fa-chart-pie"></i>
-                    分析结果概览
+                  <div v-if="error" class="error-message">
+                    <el-alert
+                      :title="error"
+                      type="error"
+                      show-icon
+                      :closable="false"
+                    />
                   </div>
-                </template>
+                </el-card>
+              </el-col>
+            </el-row>
+          </div>
 
-                <AnalysisSummary :result="analysisResult" />
-              </el-card>
-            </el-col>
-          </el-row>
+          <!-- 执行计划可视化（分析后显示） -->
+          <div v-if="isAnalyzing" class="visualization-container">
+            <el-row :gutter="20">
+              <el-col :span="24">
+                <el-card shadow="hover" class="visualization-section">
+                  <template #header>
+                    <div class="card-header">
+                      <el-button
+                        @click="goBack"
+                        type="primary"
+                        size="small"
+                        icon="el-icon-arrow-left"
+                        style="margin-right: 10px"
+                      >
+                        返回
+                      </el-button>
+                      <i class="fas fa-project-diagram"></i>
+                      执行计划可视化
+                    </div>
+                  </template>
 
-          <el-row v-if="hasAnalysisResult">
-            <el-col :span="24">
-              <el-card shadow="hover" class="visualization-section">
-                <template #header>
-                  <div class="card-header">
-                    <i class="fas fa-project-diagram"></i>
-                    执行计划可视化
-                  </div>
-                </template>
-
-                <ExecutionPlanVisualization :result="analysisResult" />
-              </el-card>
-            </el-col>
-          </el-row>
-
-          <el-row v-if="hasAnalysisResult">
-            <el-col :span="24">
-              <el-card shadow="hover" class="hotspots-section">
-                <template #header>
-                  <div class="card-header">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    热点分析与建议
-                  </div>
-                </template>
-
-                <HotSpotsPanel :hotspots="analysisResult.hotspots" />
-              </el-card>
-            </el-col>
-          </el-row>
+                  <ExecutionPlanVisualization :result="analysisResult" />
+                </el-card>
+              </el-col>
+            </el-row>
+          </div>
         </el-main>
       </el-container>
     </el-container>
@@ -88,18 +75,20 @@
 <script>
 import { mapState, mapGetters } from "vuex";
 import FileUploader from "../components/FileUploader.vue";
-import AnalysisSummary from "../components/AnalysisSummary.vue";
 import ExecutionPlanVisualization from "../components/ExecutionPlanVisualization.vue";
-import HotSpotsPanel from "../components/HotSpotsPanel.vue";
 
 export default {
   name: "ProfileAnalyzer",
 
   components: {
     FileUploader,
-    AnalysisSummary,
     ExecutionPlanVisualization,
-    HotSpotsPanel,
+  },
+
+  data() {
+    return {
+      isAnalyzing: false,
+    };
   },
 
   computed: {
@@ -107,9 +96,22 @@ export default {
     ...mapGetters(["hasAnalysisResult"]),
   },
 
+  watch: {
+    hasAnalysisResult(newVal) {
+      if (newVal) {
+        this.isAnalyzing = true;
+      }
+    },
+  },
+
   methods: {
     async handleFileUpload(file) {
       await this.$store.dispatch("analyzeProfile", file);
+    },
+
+    goBack() {
+      this.isAnalyzing = false;
+      this.$store.commit("clearAnalysisResult");
     },
   },
 };
@@ -161,10 +163,13 @@ export default {
 }
 
 .upload-section,
-.summary-section,
-.visualization-section,
-.hotspots-section {
+.visualization-section {
   height: fit-content;
+}
+
+.upload-container,
+.visualization-container {
+  height: 100%;
 }
 
 .error-message {

@@ -161,28 +161,21 @@ export default {
       // 移除硬编码，使用通用的图标映射规则
       // 根据关键词智能匹配图标
       const type = issueType.toLowerCase();
-      
+
       if (type.includes("segment") || type.includes("fragmentation"))
         return "fas fa-puzzle-piece";
       if (type.includes("connector") || type.includes("scan"))
         return "fas fa-plug";
-      if (type.includes("memory"))
-        return "fas fa-memory";
-      if (type.includes("io") || type.includes("disk"))
-        return "fas fa-hdd";
-      if (type.includes("cpu"))
-        return "fas fa-microchip";
-      if (type.includes("network"))
-        return "fas fa-network-wired";
-      if (type.includes("join"))
-        return "fas fa-code-branch";
+      if (type.includes("memory")) return "fas fa-memory";
+      if (type.includes("io") || type.includes("disk")) return "fas fa-hdd";
+      if (type.includes("cpu")) return "fas fa-microchip";
+      if (type.includes("network")) return "fas fa-network-wired";
+      if (type.includes("join")) return "fas fa-code-branch";
       if (type.includes("aggregate") || type.includes("agg"))
         return "fas fa-layer-group";
-      if (type.includes("sort"))
-        return "fas fa-sort-amount-down";
-      if (type.includes("exchange"))
-        return "fas fa-exchange-alt";
-      
+      if (type.includes("sort")) return "fas fa-sort-amount-down";
+      if (type.includes("exchange")) return "fas fa-exchange-alt";
+
       return "fas fa-exclamation-triangle"; // 默认图标
     },
   },

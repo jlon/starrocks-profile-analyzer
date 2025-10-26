@@ -186,11 +186,14 @@ export default {
     formatDuration(duration) {
       if (duration === null || duration === undefined) return "N/A";
       if (typeof duration === "string") return duration;
-      
+
       // Get total nanoseconds for precise calculation
       let totalNanos = 0;
       if (typeof duration === "object" && duration !== null) {
-        if (duration.as_secs_f64 && typeof duration.as_secs_f64 === "function") {
+        if (
+          duration.as_secs_f64 &&
+          typeof duration.as_secs_f64 === "function"
+        ) {
           // Handle Duration objects with as_secs_f64 method
           totalNanos = duration.as_secs_f64() * 1_000_000_000;
         } else {
@@ -202,17 +205,21 @@ export default {
         // Backend now returns nanoseconds directly
         totalNanos = duration;
       }
-      
+
       if (totalNanos === 0) return "0纳秒";
-      
+
       // Calculate time units
       const hours = Math.floor(totalNanos / (3600 * 1_000_000_000));
-      const minutes = Math.floor((totalNanos % (3600 * 1_000_000_000)) / (60 * 1_000_000_000));
-      const seconds = Math.floor((totalNanos % (60 * 1_000_000_000)) / 1_000_000_000);
+      const minutes = Math.floor(
+        (totalNanos % (3600 * 1_000_000_000)) / (60 * 1_000_000_000),
+      );
+      const seconds = Math.floor(
+        (totalNanos % (60 * 1_000_000_000)) / 1_000_000_000,
+      );
       const millis = Math.floor((totalNanos % 1_000_000_000) / 1_000_000);
       const micros = Math.floor((totalNanos % 1_000_000) / 1_000);
       const nanos = Math.floor(totalNanos % 1_000);
-      
+
       // Build human-readable format
       const parts = [];
       if (hours > 0) parts.push(`${hours}时`);
@@ -221,14 +228,14 @@ export default {
       if (millis > 0) parts.push(`${millis}毫秒`);
       if (micros > 0 && parts.length < 3) parts.push(`${micros}微秒`);
       if (nanos > 0 && parts.length < 2) parts.push(`${nanos}纳秒`);
-      
+
       // Return appropriate precision based on magnitude
       if (parts.length === 0) {
         return `${nanos}纳秒`;
       } else if (parts.length > 3) {
-        return parts.slice(0, 3).join('');
+        return parts.slice(0, 3).join("");
       } else {
-        return parts.join('');
+        return parts.join("");
       }
     },
 

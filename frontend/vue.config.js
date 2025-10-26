@@ -1,5 +1,5 @@
 module.exports = {
-  publicPath: '/',
+  publicPath: "/",
   configureWebpack: {
     resolve: {
       alias: {
@@ -14,7 +14,7 @@ module.exports = {
         target: "http://localhost:3030",
         changeOrigin: true,
         pathRewrite: {
-          "^/api": "/",
+          "^/api": "/api",
         },
       },
     },

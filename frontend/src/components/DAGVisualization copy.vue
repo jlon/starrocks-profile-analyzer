@@ -250,31 +250,136 @@
       </div>
 
       <!-- 右侧详情面板 -->
-      <div
-        class="detail-panel"
-        :class="{ resizing: isResizing }"
-        :style="{ width: sidebarWidth + 'px' }"
-      >
-        <!-- 拖动条 -->
-        <div
-          class="resize-handle"
-          @mousedown="startResize"
-          @touchstart="startResize"
-        ></div>
-        <!-- 空状态提示（未选中节点时显示） -->
-        <div v-if="!selectedNodeId" class="empty-panel">
-          <div class="empty-state">
-            <i
-              class="fas fa-mouse-pointer"
-              style="font-size: 48px; color: #ccc; margin-bottom: 16px"
-            ></i>
-            <h3>点击节点查看详情</h3>
-            <p>在左侧执行计划中点击任意节点，查看其详细指标和性能数据</p>
+      <div class="detail-panel">
+        <!-- Top 10 & 总览（未选中节点时显示） -->
+        <div v-if="!selectedNodeId" class="top-panel">
+          <div class="overview-header">
+            <h3>执行概览</h3>
+          </div>
+
+          <div class="overview-content">
+            <div
+              v-if="summary && summary.total_time_ms"
+              class="overview-metrics"
+            >
+              <!-- 执行时间 -->
+              <div class="metric-group">
+                <h5>Execution Wall time</h5>
+                <div class="time-bar">
+                  <div class="time-value">
+                    {{ formatDuration(getTotalTime()) }}
+                  </div>
+                </div>
+
+                <div class="time-breakdown">
+                  <div
+                    v-for="(item, idx) in getTimeBreakdown()"
+                    :key="idx"
+                    class="time-item"
+                  >
+                    <span
+                      class="time-label"
+                      :style="{ color: getTimeColors()[idx] }"
+                      >●</span
+                    >
+                    <span class="time-name">{{ item.name }}</span>
+                    <span class="time-duration">{{ item.duration }}</span>
+                    <span class="time-percent">{{ item.percent }}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Top Most Time-consuming Nodes -->
+              <div
+                v-if="
+                  summary.top_time_consuming_nodes &&
+                  summary.top_time_consuming_nodes.length > 0
+                "
+                class="metric-group"
+                style="margin-top: 20px"
+              >
+                <h5>Top Most Time-consuming Nodes</h5>
+                <div class="top-nodes-list">
+                  <div
+                    v-for="node in summary.top_time_consuming_nodes"
+                    :key="node.rank"
+                    class="top-node-item"
+                    :class="{
+                      'top-node-most-consuming': node.is_most_consuming,
+                      'top-node-second-consuming':
+                        node.is_second_most_consuming,
+                    }"
+                  >
+                    <span class="top-node-rank">{{ node.rank }}.</span>
+                    <span class="top-node-name">{{ node.operator_name }}</span>
+                    <span
+                      v-if="node.total_time && node.total_time !== 'N/A'"
+                      class="top-node-time"
+                      >{{ node.total_time }}</span
+                    >
+                    <span class="top-node-percentage"
+                      >{{ node.time_percentage.toFixed(2) }}%</span
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- 内存 -->
+              <div
+                v-if="
+                  summary.query_allocated_memory || summary.query_peak_memory
+                "
+                class="metric-group"
+                style="margin-top: 20px"
+              >
+                <h5>Memory</h5>
+                <div class="memory-metrics">
+                  <div
+                    v-if="summary.query_allocated_memory"
+                    class="memory-item"
+                  >
+                    <span class="memory-label">AllocatedMemoryUsage</span>
+                    <span class="memory-value">{{
+                      formatBytes(summary.query_allocated_memory)
+                    }}</span>
+                  </div>
+                  <div v-if="summary.query_peak_memory" class="memory-item">
+                    <span class="memory-label">PeakMemoryUsage</span>
+                    <span class="memory-value">{{
+                      formatBytes(summary.query_peak_memory)
+                    }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Spill Warning -->
+              <div
+                v-if="
+                  summary.query_spill_bytes &&
+                  summary.query_spill_bytes !== '0.000 B'
+                "
+                class="metric-group"
+                style="margin-top: 20px"
+              >
+                <h5>⚠️ Spill Warning</h5>
+                <div class="spill-warning">
+                  <div class="spill-item">
+                    <span class="spill-label">Spill Bytes</span>
+                    <span class="spill-value">{{
+                      summary.query_spill_bytes
+                    }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-state">
+              <p>暂无执行概览数据</p>
+            </div>
           </div>
         </div>
 
         <!-- 节点详情（选中节点时显示） -->
-        <div v-else-if="selectedNodeId" class="node-detail-panel">
+        <div v-else class="node-detail-panel">
           <el-tabs
             v-model="activeTab"
             tab-position="top"
@@ -428,17 +533,11 @@
                         v-if="hasMinMaxValues(selectedNode, key)"
                         class="min-max-values"
                       >
-                        <span class="max-value"
-                          >[max={{
-                            formatMetricValue(getMaxValue(selectedNode, key))
-                          }}</span
-                        >
-                        <span class="separator">, </span>
-                        <span class="min-value"
-                          >min={{
-                            formatMetricValue(getMinValue(selectedNode, key))
-                          }}]</span
-                        >
+                        [max={{
+                          formatMetricValue(getMaxValue(selectedNode, key))
+                        }}, min={{
+                          formatMetricValue(getMinValue(selectedNode, key))
+                        }}]
                       </span>
                     </div>
                   </div>
@@ -535,12 +634,6 @@ export default {
 
       zoom: 1,
       panX: 20,
-
-      // 右边栏拖动相关
-      sidebarWidth: 380,
-      isResizing: false,
-      startX: 0,
-      startWidth: 0,
       panY: 20,
 
       isPanning: false,
@@ -625,6 +718,10 @@ export default {
     } catch (e) {
       console.warn("[DAG] mounted log error", e);
     }
+  },
+
+  beforeUnmount() {
+    window.removeEventListener("resize", this.onWindowResize);
   },
 
   computed: {
@@ -1225,7 +1322,6 @@ export default {
         depth: node.depth,
         is_hotspot: node.is_hotspot,
         metrics: node.metrics,
-        unique_metrics: node.unique_metrics,
       };
       return JSON.stringify(nodeInfo, null, 2);
     },
@@ -1332,8 +1428,8 @@ export default {
 
       const uniqueMetrics = {};
       for (const [key, value] of Object.entries(node.unique_metrics)) {
-        // 不包含__MAX_OF_和__MIN_OF_前缀的指标（这些用于min/max显示）
-        if (!key.startsWith("__MIN_OF_") && !key.startsWith("__MAX_OF_")) {
+        // 过滤掉__MAX_OF_和__MIN_OF_前缀的指标，这些会在min/max值中单独处理
+        if (!key.startsWith("__MAX_OF_") && !key.startsWith("__MIN_OF_")) {
           uniqueMetrics[key] = value;
         }
       }
@@ -1522,70 +1618,6 @@ export default {
         }
       }
     },
-
-    // 右边栏拖动相关方法
-    startResize(event) {
-      this.isResizing = true;
-      this.startX = event.clientX || event.touches[0].clientX;
-      this.startWidth = this.sidebarWidth;
-
-      // 添加全局事件监听
-      document.addEventListener("mousemove", this.handleResize);
-      document.addEventListener("mouseup", this.stopResize);
-      document.addEventListener("touchmove", this.handleResize);
-      document.addEventListener("touchend", this.stopResize);
-
-      // 防止文本选择
-      document.body.style.userSelect = "none";
-      document.body.style.cursor = "col-resize";
-
-      event.preventDefault();
-    },
-
-    handleResize(event) {
-      if (!this.isResizing) return;
-
-      const currentX = event.clientX || event.touches[0].clientX;
-      const deltaX = this.startX - currentX; // 向左拖动为正值
-      const newWidth = this.startWidth + deltaX;
-
-      // 限制最小和最大宽度
-      const minWidth = 200;
-      const maxWidth = 800;
-
-      this.sidebarWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-
-      event.preventDefault();
-    },
-
-    stopResize() {
-      this.isResizing = false;
-
-      // 移除全局事件监听
-      document.removeEventListener("mousemove", this.handleResize);
-      document.removeEventListener("mouseup", this.stopResize);
-      document.removeEventListener("touchmove", this.handleResize);
-      document.removeEventListener("touchend", this.stopResize);
-
-      // 恢复默认样式
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
-    },
-  },
-
-  beforeUnmount() {
-    // 清理窗口大小监听器
-    window.removeEventListener("resize", this.onWindowResize);
-
-    // 清理拖动事件监听器
-    document.removeEventListener("mousemove", this.handleResize);
-    document.removeEventListener("mouseup", this.stopResize);
-    document.removeEventListener("touchmove", this.handleResize);
-    document.removeEventListener("touchend", this.stopResize);
-
-    // 恢复默认样式
-    document.body.style.userSelect = "";
-    document.body.style.cursor = "";
   },
 };
 </script>
@@ -1667,6 +1699,88 @@ export default {
 
 /* 连接线（精致纤细风格） */
 .connection-line {
+  stroke: #bdbdbd;
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke 0.2s;
+}
+
+.connection-line:hover {
+  stroke: #9e9e9e;
+}
+
+.connection-hotspot {
+  stroke: #e57373 !important;
+}
+
+.row-count-label {
+  font-size: 11px;
+  fill: #757575;
+  pointer-events: none;
+  text-anchor: middle;
+  font-weight: 400;
+}
+
+/* 节点 */
+.node-group {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.node-group:hover .node-header,
+.node-group:hover .node-body {
+  filter: drop-shadow(0 0 12px rgba(33, 150, 243, 0.5));
+}
+
+/* 移除选中节点的蓝色边框效果 */
+
+/* 节点头部样式 */
+.node-header {
+  fill: #cfd8dc;
+  stroke: none;
+  transition: all 0.2s;
+}
+
+.node-header-normal {
+  fill: #cfd8dc;
+}
+
+.node-header-orange {
+  fill: #e1bee7;
+}
+
+.node-header-red {
+  fill: #ffcdd2;
+}
+
+/* 节点主体样式 */
+.node-body {
+  fill: #ffffff;
+  stroke: #e0e0e0;
+  stroke-width: 1px;
+  transition: all 0.2s;
+}
+
+.node-body-normal {
+  fill: #ffffff;
+  stroke: #e0e0e0;
+}
+
+.node-body-orange {
+  fill: #f3e5f5;
+  stroke: #e0e0e0;
+  stroke-width: 1px;
+}
+
+.node-body-red {
+  fill: #ffebee;
+  stroke: #e0e0e0;
+  stroke-width: 1px;
+}
+
+/* 进度条 */
+.progress-bg {
+  fill: #e0e0e0;
   stroke: #bdbdbd;
   fill: none;
   stroke-linecap: round;

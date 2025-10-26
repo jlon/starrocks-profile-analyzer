@@ -50,6 +50,26 @@ impl SectionParser {
             query_execution_wall_time: fields.get("QueryExecutionWallTime").cloned(),
             query_execution_wall_time_ms: fields.get("QueryExecutionWallTime")
                 .and_then(|time_str| Self::parse_total_time_ms(time_str)),
+            
+            // === Execution Time Metrics ===
+            query_cumulative_cpu_time: None,
+            query_cumulative_cpu_time_ms: None,
+            query_cumulative_scan_time: None,
+            query_cumulative_scan_time_ms: None,
+            query_cumulative_network_time: None,
+            query_cumulative_network_time_ms: None,
+            query_peak_schedule_time: None,
+            query_peak_schedule_time_ms: None,
+            result_deliver_time: None,
+            result_deliver_time_ms: None,
+            
+            // === Memory Metrics ===
+            query_sum_memory_usage: None,
+            query_deallocated_memory_usage: None,
+            
+            // === Spill Metrics ===
+            query_spill_bytes: None,
+            
             top_time_consuming_nodes: None,
         })
     }
